@@ -18,7 +18,7 @@ from ..indicators.volatility import atr
 from .swings import Swing, swing_points, zigzag
 
 __all__ = ["Level", "Trendline", "find_levels", "fit_trendlines", "level_interaction",
-           "round_number_levels", "confluence_zones"]
+           "round_number_levels", "confluence_zones", "reinforce_with_round_numbers"]
 
 
 @dataclass
@@ -135,18 +135,44 @@ def round_number_levels(price: float, step: int | None = None, count: int = 3) -
         lv = base + k * step
         if lv <= 0 or abs(lv - price) / price > 0.06:
             continue
-        # Bigger round numbers (multiples of 5x/10x the step) carry more weight.
-        weight = 0.45
+        # Bigger round numbers (multiples of 5x/10x the step) carry more weight,
+        # but an *untested* round number is context, not a wall.  Strengths are
+        # kept deliberately below the threshold that lets a level veto a trade;
+        # a round number earns that status only by coinciding with a tested
+        # swing level, which `reinforce_with_round_numbers` detects.
+        weight = 0.20
         if lv % (step * 10) == 0:
-            weight = 0.75
+            weight = 0.45
         elif lv % (step * 5) == 0:
-            weight = 0.6
+            weight = 0.32
         out.append(Level(
             price=float(lv),
             kind="RESISTANCE" if lv > price else ("SUPPORT" if lv < price else "PIVOT"),
             touches=0, first_index=-1, last_index=-1, strength=weight, source="round_number",
         ))
     return out
+
+
+def reinforce_with_round_numbers(levels: list[Level], atr_value: float) -> list[Level]:
+    """Promote swing levels that coincide with a psychological round number.
+
+    A swing high at 24,987 and a swing high at 25,000 are not equally strong:
+    the latter is also a heavily-traded option strike.  Coincidence is what
+    makes a level matter, so it is rewarded here rather than assumed.
+    """
+    if not levels or not np.isfinite(atr_value) or atr_value <= 0:
+        return levels
+    swings = [lv for lv in levels if lv.source == "swing"]
+    rounds = [lv for lv in levels if lv.source == "round_number"]
+    if not swings or not rounds:
+        return levels
+    tol = atr_value * 0.35
+    for lv in swings:
+        match = min(rounds, key=lambda r: abs(r.price - lv.price))
+        if abs(match.price - lv.price) <= tol:
+            lv.strength = float(min(1.0, lv.strength + 0.25))
+            lv.source = "swing+round"
+    return levels
 
 
 def fit_trendlines(
@@ -208,12 +234,18 @@ def fit_trendlines(
     return out
 
 
-def level_interaction(price: float, levels: list[Level], atr_value: float) -> dict:
+def level_interaction(price: float, levels: list[Level], atr_value: float,
+                      min_strength: float = 0.0) -> dict:
     """Where price sits relative to the level map.
 
     ``at_level`` being true is what makes a reversal candle worth acting on and
     a breakout signal worth waiting for.
+
+    ``min_strength`` filters out weak levels.  This matters for veto logic: a
+    round number 0.3 ATR away is not a reason to skip a trade, but a swing
+    level with four touches at the same distance is.
     """
+    levels = [lv for lv in levels if lv.strength >= min_strength]
     if not levels or not np.isfinite(atr_value) or atr_value <= 0:
         return {"at_level": False, "nearest_support": None, "nearest_resistance": None,
                 "room_to_resistance_atr": None, "room_to_support_atr": None}

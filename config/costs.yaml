@@ -1,0 +1,52 @@
+# ---------------------------------------------------------------------------
+# Indian F&O transaction costs.
+#
+# These are the numbers that decide whether an intraday options strategy is
+# viable.  A round trip on one NIFTY lot costs roughly Rs.100-150 in charges;
+# a strategy earning Rs.500 per trade gives up a fifth of its edge to costs,
+# and a scalping strategy earning Rs.150 has no edge at all.  Backtests that
+# ignore this are the single biggest reason paper strategies fail live.
+#
+# Rates change by SEBI circular and exchange notification (the Oct-2024
+# "true to label" revision changed several of these at once).  VERIFY against
+# your broker's own contract note before trusting a backtest built on them.
+# ---------------------------------------------------------------------------
+verified_on: "2025-09-01"
+source_note: >
+  Rates reflect the post-October-2024 STT increase and the NSE/BSE
+  true-to-label transaction charge revision. Brokerage assumes a flat-fee
+  discount broker. Your contract note is the authority, not this file.
+
+gst_rate: 0.18                # on brokerage + exchange charges + SEBI fees
+sebi_turnover_fee: 0.000010   # Rs.10 per crore, both sides
+
+brokerage:
+  flat_per_order: 20.0        # typical discount-broker flat fee
+  percent_of_turnover: 0.0003 # 0.03%, whichever is lower
+  cap_per_order: 20.0
+
+index_options:
+  stt_sell_premium: 0.0010       # 0.10% of premium, SELL side only
+  stt_exercise_intrinsic: 0.00125  # 0.125% of intrinsic, on ITM exercise
+  nse_transaction_charge: 0.0003503   # Rs.3,503 per crore of premium
+  bse_transaction_charge: 0.0003250   # BSE SENSEX/BANKEX; verify, BSE uses slabs
+  stamp_duty_buy: 0.00003        # 0.003% of premium, BUY side only
+  ipft: 0.0000050                # NSE investor protection fund, Rs.50 per crore
+  clearing: 0.0000              # broker-dependent; often zero
+
+index_futures:
+  stt_sell: 0.0002               # 0.02% of turnover, SELL side only
+  nse_transaction_charge: 0.0000173   # Rs.1,730 per crore
+  bse_transaction_charge: 0.0000000    # BSE has waived futures charges at times
+  stamp_duty_buy: 0.00002        # 0.002% of turnover, BUY side
+  ipft: 0.0000010
+  clearing: 0.0000
+
+# Slippage assumptions used by the backtester when no bid/ask is available.
+# These are DEFAULTS, not measurements -- if you have real quote data, use it.
+slippage:
+  index_futures_ticks: 1         # 1 tick = 0.05 points
+  option_atm_pct: 0.004          # 0.4% of premium each way for a liquid ATM
+  option_otm_pct: 0.012          # 1.2% for OTM; spreads widen fast off the money
+  option_far_otm_pct: 0.030      # 3%+ for deep OTM weeklies -- often worse
+  expiry_day_multiplier: 1.6     # spreads widen materially on expiry afternoons
