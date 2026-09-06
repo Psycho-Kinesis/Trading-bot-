@@ -90,6 +90,10 @@ def squeeze(df: pd.DataFrame, bb_length: int = 20, bb_std: float = 2.0,
         "squeeze_on": on,
         "squeeze_fired": (~on) & on.shift(1).fillna(False),
         "squeeze_bars": bars_on,
+        # On the bar a squeeze fires, squeeze_bars has already reset to 0. The
+        # length of the compression that just ended is what actually matters,
+        # so carry the prior count forward.
+        "squeeze_bars_prior": bars_on.shift(1).fillna(0),
         "squeeze_momentum": mom,
     })
 
