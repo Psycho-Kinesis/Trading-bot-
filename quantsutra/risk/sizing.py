@@ -96,12 +96,21 @@ def size_option_position(
     candidates: list[tuple[float, str]] = []
     if delta is not None and index_stop_distance and abs(delta) > 0.01:
         per_unit = abs(delta) * abs(index_stop_distance)
+        capped = per_unit > premium
         candidates.append((min(per_unit, premium), "delta-translated index stop"))
-        reasons.append(
-            f"A {abs(index_stop_distance):.0f}-point adverse index move costs about "
-            f"Rs.{per_unit:.1f} per unit at delta {abs(delta):.2f} "
-            f"(gamma and theta make the real loss larger)."
-        )
+        if capped:
+            reasons.append(
+                f"A {abs(index_stop_distance):.0f}-point adverse index move implies about "
+                f"Rs.{per_unit:.1f} per unit at delta {abs(delta):.2f}, which is more than "
+                f"the Rs.{premium:.1f} premium -- the option would be near worthless well "
+                f"before the index stop is reached, so the whole premium is the real risk."
+            )
+        else:
+            reasons.append(
+                f"A {abs(index_stop_distance):.0f}-point adverse index move costs about "
+                f"Rs.{per_unit:.1f} per unit at delta {abs(delta):.2f} "
+                f"(gamma and theta make the real loss larger)."
+            )
     if stop_is_premium_pct:
         per_unit = premium * stop_is_premium_pct
         candidates.append((per_unit, f"{stop_is_premium_pct:.0%} premium stop"))

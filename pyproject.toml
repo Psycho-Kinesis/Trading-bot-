@@ -35,7 +35,8 @@ quantsutra = ["../config/*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-filterwarnings = ["ignore::DeprecationWarning"]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::UserWarning"]
+markers = ["slow: full backtest runs; deselect with -m 'not slow'"]
 
 [tool.ruff]
 line-length = 100

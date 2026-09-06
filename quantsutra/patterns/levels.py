@@ -135,15 +135,24 @@ def find_levels(
     return sorted(levels, key=lambda lv: lv.price)
 
 
-def round_number_levels(price: float, step: int | None = None, count: int = 3) -> list[Level]:
+def round_number_levels(price: float, step: int | None = None, count: int = 3,
+                        atr_value: float | None = None) -> list[Level]:
     """Psychological round numbers.
 
     These matter more on Indian indices than most markets because option
     strikes sit on them: NIFTY 25000 is simultaneously a round number, a strike
     with heavy open interest, and a pin candidate on expiry day.
+
+    The spacing is volatility-aware.  A 100-point grid is meaningful on a quiet
+    NIFTY with a 90-point ATR and meaningless on a 425-point ATR day, where
+    price crosses four of them in a single session -- so the step is widened
+    until it is at least ~0.6 ATR.
     """
     if step is None:
         step = 500 if price > 30000 else (100 if price > 10000 else 50)
+        if atr_value and np.isfinite(atr_value) and atr_value > 0:
+            while step < atr_value * 0.6:
+                step *= 5 if str(step)[0] == "1" else 2
     base = round(price / step) * step
     out: list[Level] = []
     for k in range(-count, count + 1):

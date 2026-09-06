@@ -41,6 +41,11 @@ from .rules import ALL_RULES, evaluate_rules
 __all__ = ["EngineConfig", "SignalEngine", "build_context"]
 
 
+def atr_ceiling_note(ctx: MarketContext) -> float:
+    """Point risk above which a warning is worth printing (2.5% of spot)."""
+    return ctx.spot * 0.025
+
+
 @dataclass
 class EngineConfig:
     """Thresholds and gates.  Every number here is a choice, not a law."""
@@ -55,6 +60,11 @@ class EngineConfig:
     # Risk geometry.
     stop_atr_mult: float = 1.5
     max_stop_atr_mult: float = 3.0        # a structural stop wider than this is not tradable
+    # A second, absolute cap. In an extreme-volatility regime 3 ATR can be 8%+
+    # of spot, and R-multiple targets off a stop that wide project to prices
+    # the index will not see for years. Whichever cap binds first, binds.
+    max_stop_pct: float = 0.035
+    max_target_pct: float = 0.12          # furthest target, as a share of spot
     # Targets are multiples of R (the actual risk to the stop), not of ATR.
     # Fixed ATR targets against a structural stop produce inconsistent
     # reward/risk: widen the stop and every trade silently becomes unviable.
@@ -100,7 +110,9 @@ def build_context(
     patterns = detect_chart_patterns(features)
 
     levels = find_levels(features)
-    levels_all = reinforce_with_round_numbers(levels + round_number_levels(spot), atr)
+    levels_all = reinforce_with_round_numbers(
+        levels + round_number_levels(spot, atr_value=atr), atr
+    )
     snap["_levels_info"] = level_interaction(spot, levels_all, atr)
     # Only well-established levels may veto a trade; a round number 0.3 ATR away
     # is information, not an obstacle.
@@ -268,7 +280,7 @@ class SignalEngine:
         else:
             stop, source = atr_stop, "atr"
 
-        max_risk = cfg.max_stop_atr_mult * atr
+        max_risk = min(cfg.max_stop_atr_mult * atr, cfg.max_stop_pct * spot)
         capped = False
         if abs(spot - stop) > max_risk:
             stop = spot - max_risk if bullish else spot + max_risk
@@ -281,6 +293,16 @@ class SignalEngine:
 
         sign = 1.0 if bullish else -1.0
         targets = [spot + sign * m * risk for m in cfg.target_r_multiples]
+
+        # Clamp targets to a plausible distance. A 4R target off a wide
+        # volatility-regime stop can project 30% away, which is not a swing
+        # target -- it is arithmetic pretending to be analysis.
+        target_limit = cfg.max_target_pct * spot
+        targets_clamped = False
+        for i, target in enumerate(targets):
+            if abs(target - spot) > target_limit:
+                targets[i] = spot + sign * target_limit
+                targets_clamped = True
 
         # If a well-established level sits between the entry and the first
         # target, that level -- not the arithmetic R-multiple -- is the realistic
@@ -304,6 +326,8 @@ class SignalEngine:
             "risk_reward": round(float(rr), 2) if rr else None,
             "stop_capped": capped, "stop_source": source,
             "target_at_level": snapped_to_level,
+            "targets_clamped": targets_clamped,
+            "risk_pct_of_spot": round(100 * risk / spot, 2),
         }
 
     # -- main entry point --------------------------------------------------
@@ -351,9 +375,24 @@ class SignalEngine:
         signal.risk_reward = geometry["risk_reward"]
         if geometry.get("stop_capped"):
             warnings.append(
-                f"The structural stop sat further than {cfg.max_stop_atr_mult} ATR away, so it "
-                f"was capped at {geometry['risk_points']:.0f} points. The technical invalidation "
-                f"level is beyond this stop, so expect to be stopped out on noise more often."
+                f"The technical invalidation level sat beyond the stop cap "
+                f"(min of {cfg.max_stop_atr_mult} ATR and {cfg.max_stop_pct:.1%} of spot), so "
+                f"the stop was capped at {geometry['risk_points']:.0f} points "
+                f"({geometry['risk_pct_of_spot']:.2f}% of spot). The real invalidation is "
+                f"further away, so expect to be stopped out on noise more often than the "
+                f"structure implies."
+            )
+        if geometry.get("targets_clamped"):
+            warnings.append(
+                f"Targets were clamped to {cfg.max_target_pct:.0%} of spot. The R-multiples "
+                f"off a stop this wide projected further than the index plausibly travels on "
+                f"this horizon -- which is itself a sign the stop is too wide for the setup."
+            )
+        if geometry["risk_points"] > atr_ceiling_note(ctx):
+            warnings.append(
+                f"Risk of {geometry['risk_points']:.0f} points is "
+                f"{geometry['risk_pct_of_spot']:.1f}% of spot. In a high-volatility regime "
+                f"that is arithmetically correct but means the position must be very small."
             )
 
         if geometry["risk_reward"] is not None and geometry["risk_reward"] < cfg.min_reward_risk:
