@@ -1,0 +1,135 @@
+# ---------------------------------------------------------------------------
+# Contract specifications for Indian index derivatives.
+#
+# READ THIS BEFORE TRUSTING THE NUMBERS BELOW.
+#
+# Lot sizes and expiry weekdays are set by exchange circular and HAVE changed
+# several times (Nov-2024 lot size revision, the 2025 expiry-day
+# rationalisation, the Nov-2024 withdrawal of most weekly contracts).  Every
+# rule here is therefore stamped with the date it took effect, so a backtest
+# over 2023 uses 2023's rules and not today's.
+#
+# The values are accurate to the best of the author's knowledge as of the
+# `verified_on` date.  They are NOT fetched live.  Run
+# `quantsutra verify-specs` to diff them against the exchange, and update this
+# file when a circular lands.  If a lot size here is stale your position sizing
+# will be wrong by a whole multiple -- treat this file as a config you own.
+# ---------------------------------------------------------------------------
+verified_on: "2025-09-01"
+
+instruments:
+  NIFTY:
+    name: "Nifty 50"
+    exchange: NSE
+    segment: INDEX_FNO
+    strike_step: 50
+    yahoo: "^NSEI"
+    nse_symbol: "NIFTY"
+    # Lot size history: each entry applies from `from` until the next entry.
+    lot_size:
+      - {from: "2015-01-01", value: 75}
+      - {from: "2018-01-01", value: 75}
+      - {from: "2020-01-01", value: 75}
+      - {from: "2021-01-01", value: 50}
+      - {from: "2022-01-01", value: 50}
+      - {from: "2024-11-20", value: 25}
+      - {from: "2025-01-01", value: 75}
+    # Weekly expiry weekday (0=Mon .. 6=Sun); null means no weekly contract.
+    weekly_expiry:
+      - {from: "2019-02-11", weekday: 3}   # Thursday
+      - {from: "2025-09-01", weekday: 1}   # Tuesday (NSE expiry-day rationalisation)
+    monthly_expiry:
+      - {from: "2001-06-04", weekday: 3}   # last Thursday of the month
+      - {from: "2025-09-01", weekday: 1}   # last Tuesday of the month
+
+  BANKNIFTY:
+    name: "Nifty Bank"
+    exchange: NSE
+    segment: INDEX_FNO
+    strike_step: 100
+    yahoo: "^NSEBANK"
+    nse_symbol: "BANKNIFTY"
+    lot_size:
+      - {from: "2020-01-01", value: 25}
+      - {from: "2023-01-01", value: 15}
+      - {from: "2024-11-20", value: 15}
+      - {from: "2025-01-01", value: 35}
+    # Weekly BANKNIFTY contracts were withdrawn in the Nov-2024 rationalisation.
+    weekly_expiry:
+      - {from: "2016-05-27", weekday: 3}   # Thursday
+      - {from: "2023-09-06", weekday: 2}   # Wednesday
+      - {from: "2024-11-20", weekday: null}  # weeklies discontinued
+    monthly_expiry:
+      - {from: "2005-06-13", weekday: 3}
+      - {from: "2025-09-01", weekday: 1}
+
+  FINNIFTY:
+    name: "Nifty Financial Services"
+    exchange: NSE
+    segment: INDEX_FNO
+    strike_step: 50
+    yahoo: "NIFTY_FIN_SERVICE.NS"
+    nse_symbol: "FINNIFTY"
+    lot_size:
+      - {from: "2021-01-11", value: 40}
+      - {from: "2024-11-20", value: 25}
+      - {from: "2025-01-01", value: 65}
+    weekly_expiry:
+      - {from: "2021-01-11", weekday: 1}   # Tuesday
+      - {from: "2024-11-20", weekday: null}
+    monthly_expiry:
+      - {from: "2021-01-11", weekday: 1}
+
+  MIDCPNIFTY:
+    name: "Nifty Midcap Select"
+    exchange: NSE
+    segment: INDEX_FNO
+    strike_step: 25
+    yahoo: "^NSEMDCP50"
+    nse_symbol: "MIDCPNIFTY"
+    lot_size:
+      - {from: "2022-07-01", value: 75}
+      - {from: "2024-11-20", value: 50}
+      - {from: "2025-01-01", value: 140}
+    weekly_expiry:
+      - {from: "2022-07-01", weekday: 0}   # Monday
+      - {from: "2024-11-20", weekday: null}
+    monthly_expiry:
+      - {from: "2022-07-01", weekday: 0}
+      - {from: "2025-09-01", weekday: 1}
+
+  SENSEX:
+    name: "BSE Sensex"
+    exchange: BSE
+    segment: INDEX_FNO
+    strike_step: 100
+    yahoo: "^BSESN"
+    nse_symbol: null
+    lot_size:
+      - {from: "2023-05-15", value: 10}
+      - {from: "2024-11-20", value: 10}
+      - {from: "2025-01-01", value: 20}
+    weekly_expiry:
+      - {from: "2023-05-15", weekday: 4}   # Friday
+      - {from: "2024-11-18", weekday: 1}   # Tuesday
+      - {from: "2025-01-01", weekday: 3}   # Thursday (BSE rationalisation)
+    monthly_expiry:
+      - {from: "2023-05-15", weekday: 4}
+      - {from: "2025-01-01", weekday: 3}
+
+  BANKEX:
+    name: "BSE Bankex"
+    exchange: BSE
+    segment: INDEX_FNO
+    strike_step: 100
+    yahoo: null
+    nse_symbol: null
+    lot_size:
+      - {from: "2023-05-15", value: 15}
+      - {from: "2025-01-01", value: 30}
+    weekly_expiry:
+      - {from: "2023-05-15", weekday: 0}
+      - {from: "2024-11-18", weekday: null}
+    monthly_expiry:
+      - {from: "2023-05-15", weekday: 0}
+      - {from: "2025-01-01", weekday: 3}
