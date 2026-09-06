@@ -8,12 +8,36 @@ import pandas as pd
 REQUIRED = ("open", "high", "low", "close")
 
 
+_CANONICAL = ("open", "high", "low", "close", "volume")
+
+
+def _is_canonical(df: pd.DataFrame) -> bool:
+    """True when the frame is already normalised, so no copy is needed.
+
+    This matters: a single signal evaluation calls ensure_ohlcv ~75 times, and
+    an unconditional DataFrame copy on each made it the largest single cost in
+    the backtester.
+    """
+    columns = df.columns
+    if not all(c in columns for c in _CANONICAL):
+        return False
+    try:
+        return all(pd.api.types.is_numeric_dtype(df[c]) for c in _CANONICAL)
+    except (KeyError, TypeError):
+        return False
+
+
 def ensure_ohlcv(df: pd.DataFrame, need_volume: bool = False) -> pd.DataFrame:
     """Normalise column names and validate that the frame is usable.
 
     Accepts the common capitalisations produced by yfinance / NSE bhavcopy /
-    broker APIs and returns a lower-cased copy.
+    broker APIs and returns a lower-cased frame.  Callers treat the result as
+    read-only -- when the input is already canonical it is returned as-is
+    rather than copied.
     """
+    if _is_canonical(df):
+        return df
+
     out = df.copy()
     out.columns = [str(c).strip().lower().replace(" ", "_") for c in out.columns]
     alias = {

@@ -17,6 +17,21 @@ from ..indicators._util import ensure_ohlcv
 from ..indicators.volatility import atr
 from .swings import Swing, last_swings, zigzag
 
+
+def _last_atr(d: pd.DataFrame, length: int = 14) -> float:
+    """Latest ATR, reusing the ``atr_14`` column when the caller already has it.
+
+    ``build_context`` passes the full feature frame to every pattern helper, so
+    recomputing ATR in each of them was pure duplicated work.
+    """
+    if length == 14 and "atr_14" in d.columns:
+        value = d["atr_14"].iloc[-1]
+        if value is not None and np.isfinite(value) and value > 0:
+            return float(value)
+    series = atr(d, length)
+    value = series.iloc[-1] if len(series) else np.nan
+    return float(value) if np.isfinite(value) and value > 0 else float("nan")
+
 __all__ = ["StructureState", "market_structure", "fair_value_gaps", "order_blocks",
            "liquidity_sweeps", "inside_outside_sequence"]
 
@@ -134,7 +149,7 @@ def fair_value_gaps(df: pd.DataFrame, lookback: int = 60, min_atr: float = 0.2) 
     d = ensure_ohlcv(df).tail(lookback + 2)
     if len(d) < 5:
         return []
-    a = float(atr(d, 14).iloc[-1])
+    a = _last_atr(d, 14)
     if not np.isfinite(a) or a <= 0:
         return []
     high = d["high"].to_numpy(float)
@@ -172,7 +187,7 @@ def order_blocks(df: pd.DataFrame, lookback: int = 80, impulse_atr: float = 1.5)
     d = ensure_ohlcv(df).tail(lookback)
     if len(d) < 10:
         return []
-    a = float(atr(d, 14).iloc[-1])
+    a = _last_atr(d, 14)
     if not np.isfinite(a) or a <= 0:
         return []
     o = d["open"].to_numpy(float); c = d["close"].to_numpy(float)
@@ -217,7 +232,7 @@ def liquidity_sweeps(df: pd.DataFrame, lookback: int = 60, pivot: int = 3) -> li
     pivots = swing_points(d, pivot, pivot)
     high = d["high"].to_numpy(float); low = d["low"].to_numpy(float)
     close = d["close"].to_numpy(float); n = len(d)
-    a = float(atr(d, 14).iloc[-1])
+    a = _last_atr(d, 14)
     if not np.isfinite(a) or a <= 0:
         return []
 

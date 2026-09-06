@@ -66,6 +66,10 @@ class RiskManager:
         self.day_pnl = 0.0
         self.trades_today = 0
         self.halted_reason = None
+        # The consecutive-loss rule is a *daily* circuit breaker. Without this
+        # reset it deadlocks: after N losses it blocks every trade, and the
+        # counter only clears on a win, which can then never happen.
+        self.consecutive_losses = 0
 
     def record_trade(self, pnl: float) -> None:
         self.day_pnl += pnl
@@ -120,9 +124,9 @@ class RiskManager:
 
         if self.consecutive_losses >= lim.max_consecutive_losses:
             return RiskCheck(False, [
-                f"{self.consecutive_losses} consecutive losses. Either the regime has "
+                f"{self.consecutive_losses} consecutive losses today. Either the regime has "
                 f"changed or the setup has stopped working; stop and re-read the tape "
-                f"rather than sizing up."
+                f"rather than sizing up. This resets tomorrow."
             ])
 
         if self.trades_today >= lim.max_trades_per_day:

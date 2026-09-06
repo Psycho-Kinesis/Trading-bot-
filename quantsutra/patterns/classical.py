@@ -18,6 +18,21 @@ from ..indicators._util import ensure_ohlcv
 from ..indicators.volatility import atr
 from .swings import Swing, zigzag
 
+
+def _last_atr(d: pd.DataFrame, length: int = 14) -> float:
+    """Latest ATR, reusing the ``atr_14`` column when the caller already has it.
+
+    ``build_context`` passes the full feature frame to every pattern helper, so
+    recomputing ATR in each of them was pure duplicated work.
+    """
+    if length == 14 and "atr_14" in d.columns:
+        value = d["atr_14"].iloc[-1]
+        if value is not None and np.isfinite(value) and value > 0:
+            return float(value)
+    series = atr(d, length)
+    value = series.iloc[-1] if len(series) else np.nan
+    return float(value) if np.isfinite(value) and value > 0 else float("nan")
+
 __all__ = ["ChartPattern", "detect_chart_patterns"]
 
 
@@ -72,7 +87,7 @@ def detect_chart_patterns(
     if len(pivots) < 4:
         return []
 
-    a = float(atr(d, 14).iloc[-1])
+    a = _last_atr(d, 14)
     if not np.isfinite(a) or a <= 0:
         a = float(d["close"].iloc[-1]) * 0.005
     close = d["close"].to_numpy(float)
