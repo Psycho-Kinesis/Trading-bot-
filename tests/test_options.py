@@ -13,7 +13,7 @@ import pytest
 from quantsutra.options.chain import classify_oi_buildup, iv_rank, max_pain, put_call_ratio
 from quantsutra.options.pricing import (DEFAULT_DIVIDEND_YIELD, DEFAULT_RATE, bs_price,
                                         delta_to_strike, greeks, implied_volatility,
-                                        intrinsic_value, moneyness, time_to_expiry)
+                                        moneyness, time_to_expiry)
 from quantsutra.options.selection import select_strike
 from quantsutra.options.strategies import build_strategy, choose_structure, strategy_metrics
 from quantsutra.constants import Action

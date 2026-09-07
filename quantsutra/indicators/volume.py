@@ -11,8 +11,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from ._util import ensure_ohlcv, percent_rank, true_range
-from .trend import ema, sma
+from ._util import ensure_ohlcv
+from .trend import ema
 
 __all__ = [
     "has_usable_volume", "obv", "cmf", "mfi", "adl", "vwap", "anchored_vwap",
@@ -179,10 +179,10 @@ def volume_profile(
     hist = np.zeros(bins)
 
     # Spread each bar's volume uniformly across the bins its range covers.
-    for h, l, v in zip(d["high"].to_numpy(float), d["low"].to_numpy(float), d["volume"].to_numpy(float)):
-        if not np.isfinite(v) or v <= 0 or not np.isfinite(h) or not np.isfinite(l):
+    for h, lo, v in zip(d["high"].to_numpy(float), d["low"].to_numpy(float), d["volume"].to_numpy(float)):
+        if not np.isfinite(v) or v <= 0 or not np.isfinite(h) or not np.isfinite(lo):
             continue
-        start = np.searchsorted(edges, l, side="right") - 1
+        start = np.searchsorted(edges, lo, side="right") - 1
         end = np.searchsorted(edges, h, side="left")
         start = max(0, min(start, bins - 1))
         end = max(start + 1, min(end, bins))

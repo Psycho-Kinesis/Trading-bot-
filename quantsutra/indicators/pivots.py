@@ -22,22 +22,22 @@ def _prev(df: pd.DataFrame) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series]
 
 
 def classic_pivots(df: pd.DataFrame) -> pd.DataFrame:
-    h, l, c, _ = _prev(df)
-    p = (h + l + c) / 3
-    rng = h - l
+    h, lo, c, _ = _prev(df)
+    p = (h + lo + c) / 3
+    rng = h - lo
     return pd.DataFrame({
         "pivot": p,
-        "r1": 2 * p - l, "s1": 2 * p - h,
+        "r1": 2 * p - lo, "s1": 2 * p - h,
         "r2": p + rng, "s2": p - rng,
-        "r3": h + 2 * (p - l), "s3": l - 2 * (h - p),
-        "r4": h + 3 * (p - l), "s4": l - 3 * (h - p),
+        "r3": h + 2 * (p - lo), "s3": lo - 2 * (h - p),
+        "r4": h + 3 * (p - lo), "s4": lo - 3 * (h - p),
     })
 
 
 def fibonacci_pivots(df: pd.DataFrame) -> pd.DataFrame:
-    h, l, c, _ = _prev(df)
-    p = (h + l + c) / 3
-    rng = h - l
+    h, lo, c, _ = _prev(df)
+    p = (h + lo + c) / 3
+    rng = h - lo
     return pd.DataFrame({
         "pivot": p,
         "r1": p + 0.382 * rng, "s1": p - 0.382 * rng,
@@ -49,10 +49,10 @@ def fibonacci_pivots(df: pd.DataFrame) -> pd.DataFrame:
 def camarilla_pivots(df: pd.DataFrame) -> pd.DataFrame:
     """Camarilla -- H3/L3 are the classic intraday reversal band, H4/L4 the
     breakout trigger."""
-    h, l, c, _ = _prev(df)
-    rng = h - l
+    h, lo, c, _ = _prev(df)
+    rng = h - lo
     return pd.DataFrame({
-        "pivot": (h + l + c) / 3,
+        "pivot": (h + lo + c) / 3,
         "h1": c + rng * 1.1 / 12, "l1": c - rng * 1.1 / 12,
         "h2": c + rng * 1.1 / 6, "l2": c - rng * 1.1 / 6,
         "h3": c + rng * 1.1 / 4, "l3": c - rng * 1.1 / 4,
@@ -62,12 +62,12 @@ def camarilla_pivots(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def woodie_pivots(df: pd.DataFrame) -> pd.DataFrame:
-    h, l, c, o = _prev(df)
-    p = (h + l + 2 * o) / 4
+    h, lo, c, o = _prev(df)
+    p = (h + lo + 2 * o) / 4
     return pd.DataFrame({
         "pivot": p,
-        "r1": 2 * p - l, "s1": 2 * p - h,
-        "r2": p + (h - l), "s2": p - (h - l),
+        "r1": 2 * p - lo, "s1": 2 * p - h,
+        "r2": p + (h - lo), "s2": p - (h - lo),
     })
 
 
@@ -79,9 +79,9 @@ def cpr(df: pd.DataFrame) -> pd.DataFrame:
     days are the ones worth taking breakout setups on.
     """
     d = ensure_ohlcv(df)
-    h, l, c = d["high"].shift(1), d["low"].shift(1), d["close"].shift(1)
-    pivot = (h + l + c) / 3
-    bc = (h + l) / 2
+    h, lo, c = d["high"].shift(1), d["low"].shift(1), d["close"].shift(1)
+    pivot = (h + lo + c) / 3
+    bc = (h + lo) / 2
     tc = 2 * pivot - bc
     top = pd.concat([tc, bc], axis=1).max(axis=1)
     bottom = pd.concat([tc, bc], axis=1).min(axis=1)

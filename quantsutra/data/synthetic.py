@@ -93,16 +93,16 @@ def generate_intraday_series(
     rows, stamps = [], []
 
     for ts, bar in daily.iterrows():
-        o, h, l, c = float(bar["open"]), float(bar["high"]), float(bar["low"]), float(bar["close"])
+        o, h, lo, c = float(bar["open"]), float(bar["high"]), float(bar["low"]), float(bar["close"])
         day_volume = float(bar.get("volume", 0) or 0)
 
         steps = np.cumsum(rng.standard_normal(per_day))
         steps -= np.linspace(0, steps[-1], per_day)          # bridge: ends at zero
-        path = np.linspace(o, c, per_day) + steps * (h - l) * 0.18
+        path = np.linspace(o, c, per_day) + steps * (h - lo) * 0.18
 
         span = path.max() - path.min()
         if span > 0:
-            path = l + (path - path.min()) * (h - l) / span
+            path = lo + (path - path.min()) * (h - lo) / span
         path[0], path[-1] = o, c
 
         # U-shaped volume profile: heavy at the open and into the close.
@@ -113,9 +113,9 @@ def generate_intraday_series(
         session_start = ts.replace(hour=9, minute=15, second=0, microsecond=0)
         for i in range(per_day):
             prev = path[i - 1] if i else o
-            hi = max(prev, path[i]) + abs(rng.normal(0, (h - l) * 0.03))
-            lo = min(prev, path[i]) - abs(rng.normal(0, (h - l) * 0.03))
-            rows.append((prev, min(hi, h), max(lo, l), path[i], day_volume * weights[i]))
+            hi = max(prev, path[i]) + abs(rng.normal(0, (h - lo) * 0.03))
+            lo = min(prev, path[i]) - abs(rng.normal(0, (h - lo) * 0.03))
+            rows.append((prev, min(hi, h), max(lo, lo), path[i], day_volume * weights[i]))
             stamps.append(session_start + dt.timedelta(minutes=minutes * (i + 1)))
 
     frame = pd.DataFrame(rows, columns=["open", "high", "low", "close", "volume"],

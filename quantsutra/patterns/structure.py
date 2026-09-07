@@ -15,7 +15,7 @@ import pandas as pd
 
 from ..indicators._util import ensure_ohlcv
 from ..indicators.volatility import atr
-from .swings import Swing, last_swings, zigzag
+from .swings import last_swings, zigzag
 
 
 def _last_atr(d: pd.DataFrame, length: int = 14) -> float:
@@ -190,8 +190,10 @@ def order_blocks(df: pd.DataFrame, lookback: int = 80, impulse_atr: float = 1.5)
     a = _last_atr(d, 14)
     if not np.isfinite(a) or a <= 0:
         return []
-    o = d["open"].to_numpy(float); c = d["close"].to_numpy(float)
-    h = d["high"].to_numpy(float); l = d["low"].to_numpy(float)
+    o = d["open"].to_numpy(float)
+    c = d["close"].to_numpy(float)
+    h = d["high"].to_numpy(float)
+    lo = d["low"].to_numpy(float)
     n = len(d)
     out = []
     for i in range(1, n - 2):
@@ -199,8 +201,8 @@ def order_blocks(df: pd.DataFrame, lookback: int = 80, impulse_atr: float = 1.5)
         if abs(impulse) < a * impulse_atr:
             continue
         if impulse > 0 and c[i] < o[i]:                # bullish OB: last down candle
-            top, bottom = float(max(o[i], c[i])), float(l[i])
-            lowest_since = _min_after(l, i + 2, top)
+            top, bottom = float(max(o[i], c[i])), float(lo[i])
+            lowest_since = _min_after(lo, i + 2, top)
             if lowest_since > bottom:
                 out.append({"kind": "BULLISH", "top": round(top, 2), "bottom": round(bottom, 2),
                             "index": i, "bars_ago": n - 1 - i,
@@ -230,8 +232,10 @@ def liquidity_sweeps(df: pd.DataFrame, lookback: int = 60, pivot: int = 3) -> li
     from .swings import swing_points
 
     pivots = swing_points(d, pivot, pivot)
-    high = d["high"].to_numpy(float); low = d["low"].to_numpy(float)
-    close = d["close"].to_numpy(float); n = len(d)
+    high = d["high"].to_numpy(float)
+    low = d["low"].to_numpy(float)
+    close = d["close"].to_numpy(float)
+    n = len(d)
     a = _last_atr(d, 14)
     if not np.isfinite(a) or a <= 0:
         return []
@@ -257,13 +261,14 @@ def liquidity_sweeps(df: pd.DataFrame, lookback: int = 60, pivot: int = 3) -> li
 def inside_outside_sequence(df: pd.DataFrame, lookback: int = 10) -> dict:
     """Compression/expansion state from consecutive inside and outside bars."""
     d = ensure_ohlcv(df).tail(lookback + 1)
-    h = d["high"].to_numpy(float); l = d["low"].to_numpy(float)
+    h = d["high"].to_numpy(float)
+    lo = d["low"].to_numpy(float)
     inside = outside = 0
     for i in range(len(d) - 1, 0, -1):
-        if h[i] <= h[i - 1] and l[i] >= l[i - 1]:
+        if h[i] <= h[i - 1] and lo[i] >= lo[i - 1]:
             inside += 1
             outside = 0
-        elif h[i] > h[i - 1] and l[i] < l[i - 1]:
+        elif h[i] > h[i - 1] and lo[i] < lo[i - 1]:
             outside += 1
             break
         else:

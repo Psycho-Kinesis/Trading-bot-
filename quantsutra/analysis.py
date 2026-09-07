@@ -12,7 +12,6 @@ import datetime as dt
 import warnings
 from dataclasses import dataclass
 
-import numpy as np
 import pandas as pd
 
 from .calendar_in import expiry_context, session_phase
@@ -20,7 +19,7 @@ from .constants import IST, Action, Direction
 from .data.base import validate_frame
 from .knowledge.events import event_risk, lessons_for_regime
 from .options.chain import OptionChain, iv_rank
-from .options.selection import recommend_contract, select_expiry, select_strike
+from .options.selection import recommend_contract, select_expiry
 from .options.strategies import build_strategy, choose_structure
 from .risk.costs import CostModel
 from .risk.sizing import size_option_position
@@ -257,7 +256,6 @@ def _no_trade_recommendation(signal, playbooks) -> dict:
 
 
 def _build_recommendation(signal, result, playbooks) -> dict:
-    contract = result.get("contract") or {}
     position = result.get("position") or {}
     strategy = result.get("strategy") or {}
     lines: list[str] = []

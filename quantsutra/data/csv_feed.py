@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .base import FeedError, normalise_frame, resample_ohlcv, validate_frame
+from .base import FeedError, normalise_frame, validate_frame
 
 __all__ = ["CsvFeed"]
 

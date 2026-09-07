@@ -26,15 +26,13 @@ as an upper bound rather than an expectation.
 
 from __future__ import annotations
 
-import datetime as dt
 import warnings
 from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
 
-from ..calendar_in import expiry_context, lot_size as calendar_lot_size
-from ..constants import IST, Action, Direction
+from ..constants import IST, Direction
 from ..indicators._util import ensure_ohlcv
 from ..options.pricing import bs_price, greeks, time_to_expiry
 from ..options.selection import select_expiry

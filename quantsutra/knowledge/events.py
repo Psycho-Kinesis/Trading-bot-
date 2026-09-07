@@ -22,10 +22,8 @@ tiny and the base rate of "this time it is different" is high.
 from __future__ import annotations
 
 import datetime as dt
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
-import numpy as np
-import pandas as pd
 
 __all__ = ["MarketEvent", "MARKET_EVENTS", "RECURRING_EVENTS", "events_between",
            "event_risk", "upcoming_events", "lessons_for_regime"]

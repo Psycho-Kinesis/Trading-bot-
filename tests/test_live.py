@@ -5,7 +5,6 @@ import datetime as dt
 import pytest
 
 from quantsutra.live import Journal, Notifier, TelegramSink, format_signal
-from quantsutra.live.notify import ConsoleSink
 from quantsutra.live.runner import LiveScanner, ScannerConfig
 
 

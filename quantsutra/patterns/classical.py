@@ -16,7 +16,7 @@ import pandas as pd
 
 from ..indicators._util import ensure_ohlcv
 from ..indicators.volatility import atr
-from .swings import Swing, zigzag
+from .swings import zigzag
 
 
 def _last_atr(d: pd.DataFrame, length: int = 14) -> float:
@@ -94,7 +94,6 @@ def detect_chart_patterns(
     high = d["high"].to_numpy(float)
     low = d["low"].to_numpy(float)
     n = len(d)
-    last = close[-1]
     recent_cut = int(n * 0.55)
 
     found: list[ChartPattern] = []

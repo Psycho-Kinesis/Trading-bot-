@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime as dt
 
 from rich.console import Console, Group
 from rich.panel import Panel
@@ -79,7 +78,8 @@ def render_signal(signal: dict, show_rules: bool = True, max_rules: int = 12) ->
     if signal.get("entry") and signal.get("stop_loss"):
         risk = abs(signal["entry"] - signal["stop_loss"])
         trade = Table(show_header=True, header_style="dim", box=None, padding=(0, 2))
-        trade.add_column("Level"); trade.add_column("Price", justify="right")
+        trade.add_column("Level")
+        trade.add_column("Price", justify="right")
         trade.add_column("Distance", justify="right")
         trade.add_row("Entry", f"{signal['entry']:,.2f}", "-")
         trade.add_row("Stop loss", f"{signal['stop_loss']:,.2f}", f"{risk:,.0f} pts (1R)")
@@ -106,15 +106,19 @@ def render_signal(signal: dict, show_rules: bool = True, max_rules: int = 12) ->
 
     if signal.get("category_scores") and show_rules:
         cat = Table(show_header=True, header_style="dim", box=None, padding=(0, 2))
-        cat.add_column("Family"); cat.add_column("Score", justify="right"); cat.add_column("")
+        cat.add_column("Family")
+        cat.add_column("Score", justify="right")
+        cat.add_column("")
         for name, value in sorted(signal["category_scores"].items(), key=lambda kv: -abs(kv[1])):
             cat.add_row(name, f"{value:+.2f}", _score_bar(value, 17))
         blocks.append(Panel(cat, title="Evidence by family", border_style="blue"))
 
     if show_rules and signal.get("rules"):
         rules = Table(show_header=True, header_style="dim", box=None, padding=(0, 1))
-        rules.add_column("Rule", style="dim"); rules.add_column("Bias")
-        rules.add_column("Score", justify="right"); rules.add_column("Rationale", overflow="fold")
+        rules.add_column("Rule", style="dim")
+        rules.add_column("Bias")
+        rules.add_column("Score", justify="right")
+        rules.add_column("Rationale", overflow="fold")
         fired = [r for r in signal["rules"] if abs(r["score"]) > 0.01 or r["confidence"] < 1]
         for rule in sorted(fired, key=lambda r: -abs(r["score"]))[:max_rules]:
             style = "green" if rule["score"] > 0 else "red" if rule["score"] < 0 else "dim"
@@ -145,7 +149,8 @@ def _confidence_text(value: float) -> Text:
 
 def _contract_table(contract: dict) -> Table:
     table = Table.grid(padding=(0, 2))
-    table.add_column(style="dim", justify="right"); table.add_column()
+    table.add_column(style="dim", justify="right")
+    table.add_column()
     for key in ("instrument", "expiry", "dte_trading", "strike", "option_type",
                 "premium", "delta", "iv", "oi", "moneyness", "lot_size"):
         if contract.get(key) is not None:
@@ -159,7 +164,8 @@ def _contract_table(contract: dict) -> Table:
 
 def _position_table(position: dict) -> Table:
     table = Table.grid(padding=(0, 2))
-    table.add_column(style="dim", justify="right"); table.add_column()
+    table.add_column(style="dim", justify="right")
+    table.add_column()
     for key in ("lots", "units", "risk_amount", "risk_pct_of_capital", "max_loss",
                 "notional", "margin_estimate"):
         if position.get(key) is not None:
@@ -175,7 +181,8 @@ def _position_table(position: dict) -> Table:
 
 def render_chain(summary: dict) -> Panel:
     table = Table.grid(padding=(0, 2))
-    table.add_column(style="dim", justify="right"); table.add_column()
+    table.add_column(style="dim", justify="right")
+    table.add_column()
     for key in ("symbol", "spot", "expiry", "dte_trading", "atm_strike", "atm_iv",
                 "pcr_oi", "pcr_reading", "iv_skew", "skew_reading",
                 "max_call_oi_strike", "max_put_oi_strike", "oi_flow_bias",

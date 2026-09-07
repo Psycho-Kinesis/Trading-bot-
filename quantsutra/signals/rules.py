@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..constants import Regime
 from .base import Category, MarketContext, RuleResult
 
 __all__ = ["ALL_RULES", "evaluate_rules"]

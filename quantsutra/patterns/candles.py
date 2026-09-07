@@ -9,7 +9,8 @@ Two design decisions worth knowing about:
 2. Each detection carries a ``strength`` in [0, 1] and a ``context`` flag
    saying whether the pattern appeared at a meaningful location (after a
    pullback, at a band edge, at a swing).  A bullish engulfing in the middle of
-   a range is noise; the same bar at the lower Bollinger band after a
+   a range is noise
+   the same bar at the lower Bollinger band after a
    three-bar decline is a signal.  The signal engine only rewards the latter.
 """
 
@@ -61,12 +62,12 @@ class CandleSignal:
 def candle_anatomy(df: pd.DataFrame, ref_length: int = 20) -> pd.DataFrame:
     """Per-bar geometry, normalised by a rolling average range."""
     d = ensure_ohlcv(df)
-    o, h, l, c = d["open"], d["high"], d["low"], d["close"]
-    rng = (h - l).replace(0, np.nan)
+    o, h, lo, c = d["open"], d["high"], d["low"], d["close"]
+    rng = (h - lo).replace(0, np.nan)
     body = (c - o).abs()
-    avg_range = (h - l).rolling(ref_length).mean().replace(0, np.nan)
+    avg_range = (h - lo).rolling(ref_length).mean().replace(0, np.nan)
     upper = h - pd.concat([o, c], axis=1).max(axis=1)
-    lower = pd.concat([o, c], axis=1).min(axis=1) - l
+    lower = pd.concat([o, c], axis=1).min(axis=1) - lo
     return pd.DataFrame({
         "body": body,
         "body_pct": body / rng,
@@ -74,8 +75,8 @@ def candle_anatomy(df: pd.DataFrame, ref_length: int = 20) -> pd.DataFrame:
         "lower_shadow": lower,
         "upper_pct": upper / rng,
         "lower_pct": lower / rng,
-        "range": h - l,
-        "rel_range": (h - l) / avg_range,
+        "range": h - lo,
+        "rel_range": (h - lo) / avg_range,
         "rel_body": body / avg_range,
         "bullish": c > o,
         "bearish": c < o,
@@ -120,8 +121,10 @@ def detect_candles(
     if n < 5:
         return []
 
-    o = d["open"].to_numpy(float); h = d["high"].to_numpy(float)
-    l = d["low"].to_numpy(float); c = d["close"].to_numpy(float)
+    o = d["open"].to_numpy(float)
+    h = d["high"].to_numpy(float)
+    lo = d["low"].to_numpy(float)
+    c = d["close"].to_numpy(float)
     body_pct = a["body_pct"].to_numpy(float)
     upper_pct = a["upper_pct"].to_numpy(float)
     lower_pct = a["lower_pct"].to_numpy(float)
@@ -146,7 +149,7 @@ def detect_candles(
         if np.isnan(rel_body[i]) or np.isnan(body_pct[i]):
             continue
         prior = _trend_context(d, i)
-        b, u, lo_, rb, rr = body_pct[i], upper_pct[i], lower_pct[i], rel_body[i], rel_range[i]
+        b, u, lo_, rr = body_pct[i], upper_pct[i], lower_pct[i], rel_range[i]
 
         # ---- single-bar -------------------------------------------------
         if b < 0.1 and rr > 0.4:
@@ -186,7 +189,8 @@ def detect_candles(
         # ---- two-bar ----------------------------------------------------
         p = i - 1
         if not np.isnan(rel_body[p]):
-            body_i = abs(c[i] - o[i]); body_p = abs(c[p] - o[p])
+            body_i = abs(c[i] - o[i])
+            body_p = abs(c[p] - o[p])
 
             if bull[i] and bear[p] and c[i] >= o[p] and o[i] <= c[p] and body_i > body_p:
                 add("bullish_engulfing", i, 0.55 + min(body_i / max(body_p, 1e-9) / 4, 0.4),
@@ -205,7 +209,7 @@ def detect_candles(
 
             # Piercing / dark cloud need a gap open against the prior close.
             mid_p = (o[p] + c[p]) / 2
-            if bear[p] and bull[i] and o[i] < l[p] and c[i] > mid_p and c[i] < o[p]:
+            if bear[p] and bull[i] and o[i] < lo[p] and c[i] > mid_p and c[i] < o[p]:
                 add("piercing_line", i, 0.55 + (c[i] - mid_p) / max(o[p] - c[p], 1e-9) * 0.3,
                     prior == -1, "gapped down and recovered past the midpoint")
             if bull[p] and bear[i] and o[i] > h[p] and c[i] < mid_p and c[i] > o[p]:
@@ -214,20 +218,20 @@ def detect_candles(
 
             tol = 0.1 * np.nanmean([a["range"].to_numpy(float)[p], a["range"].to_numpy(float)[i]])
             if tol > 0:
-                if abs(l[i] - l[p]) <= tol and prior == -1 and bull[i]:
+                if abs(lo[i] - lo[p]) <= tol and prior == -1 and bull[i]:
                     add("tweezer_bottom", i, 0.45, True, "matched lows rejected twice")
                 if abs(h[i] - h[p]) <= tol and prior == 1 and bear[i]:
                     add("tweezer_top", i, 0.45, True, "matched highs rejected twice")
 
             # Kicker: a gap in the opposite direction with no overlap at all.
-            if bear[p] and bull[i] and o[i] > o[p] and l[i] > h[p]:
+            if bear[p] and bull[i] and o[i] > o[p] and lo[i] > h[p]:
                 add("bullish_kicker", i, 0.75, True, "full gap reversal, no overlap")
-            if bull[p] and bear[i] and o[i] < o[p] and h[i] < l[p]:
+            if bull[p] and bear[i] and o[i] < o[p] and h[i] < lo[p]:
                 add("bearish_kicker", i, 0.75, True, "full gap reversal, no overlap")
 
-            if h[i] <= h[p] and l[i] >= l[p]:
+            if h[i] <= h[p] and lo[i] >= lo[p]:
                 add("inside_bar", i, 0.3, True, "compression, awaiting expansion")
-            if h[i] > h[p] and l[i] < l[p]:
+            if h[i] > h[p] and lo[i] < lo[p]:
                 add("outside_bar", i, 0.35, True, "both sides taken out")
 
         # ---- three-bar --------------------------------------------------
@@ -258,7 +262,7 @@ def detect_candles(
             inside_p = max(o[p], c[p]) < max(o[q], c[q]) and min(o[p], c[p]) > min(o[q], c[q])
             if inside_p and bear[q] and bull[p] and bull[i] and c[i] > h[q]:
                 add("three_inside_up", i, 0.7, prior == -1, "harami confirmed by a breakout close")
-            if inside_p and bull[q] and bear[p] and bear[i] and c[i] < l[q]:
+            if inside_p and bull[q] and bear[p] and bear[i] and c[i] < lo[q]:
                 add("three_inside_down", i, 0.7, prior == 1, "harami confirmed by a breakdown close")
             if bear[q] and bull[p] and c[p] > o[q] and o[p] < c[q] and bull[i] and c[i] > c[p]:
                 add("three_outside_up", i, 0.7, prior == -1, "engulfing confirmed the next bar")
@@ -271,11 +275,11 @@ def detect_candles(
             mids = range(i - 3, i)
             if bull[first] and bull[last] and c[last] > c[first] and rel_body[first] > 1.0 and \
                all(bear[m] or body_pct[m] < 0.4 for m in mids) and \
-               all(h[m] <= h[first] and l[m] >= l[first] for m in mids):
+               all(h[m] <= h[first] and lo[m] >= lo[first] for m in mids):
                 add("rising_three_methods", i, 0.65, True, "shallow pause inside a strong up bar")
             if bear[first] and bear[last] and c[last] < c[first] and rel_body[first] > 1.0 and \
                all(bull[m] or body_pct[m] < 0.4 for m in mids) and \
-               all(h[m] <= h[first] and l[m] >= l[first] for m in mids):
+               all(h[m] <= h[first] and lo[m] >= lo[first] for m in mids):
                 add("falling_three_methods", i, 0.65, True, "shallow pause inside a strong down bar")
 
     return out

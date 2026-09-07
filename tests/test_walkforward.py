@@ -1,7 +1,5 @@
 """Walk-forward validation and the paper broker."""
 
-import numpy as np
-import pandas as pd
 import pytest
 
 from quantsutra.backtest import BacktestConfig, WalkForwardResult, rolling_windows, walk_forward

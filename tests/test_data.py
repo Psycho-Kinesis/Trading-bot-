@@ -13,7 +13,7 @@ import pytest
 from quantsutra.data import CsvFeed, FeedCache, FeedError, get_feed
 from quantsutra.data.base import normalise_frame, resample_ohlcv, validate_frame
 from quantsutra.data.nse import NseFeed
-from quantsutra.data.synthetic import (generate_index_series, generate_intraday_series,
+from quantsutra.data.synthetic import (generate_intraday_series,
                                        generate_vix_series)
 from quantsutra.data.yahoo import YahooFeed
 

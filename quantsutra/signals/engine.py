@@ -35,7 +35,7 @@ from ..patterns.levels import (confluence_zones, find_levels, level_interaction,
 from ..patterns.structure import (fair_value_gaps, liquidity_sweeps, market_structure,
                                   order_blocks)
 from ..regime import classify_regime
-from .base import CATEGORY_CAPS, Category, MarketContext, RuleResult, Signal
+from .base import CATEGORY_CAPS, MarketContext, RuleResult, Signal
 from .rules import ALL_RULES, evaluate_rules
 
 __all__ = ["EngineConfig", "SignalEngine", "build_context"]

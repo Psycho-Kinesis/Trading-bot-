@@ -7,7 +7,6 @@ saw, which is the difference between a reproducible result and an anecdote.
 
 from __future__ import annotations
 
-import datetime as dt
 import hashlib
 import json
 import time

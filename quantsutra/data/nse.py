@@ -22,13 +22,12 @@ from __future__ import annotations
 import datetime as dt
 import time
 
-import pandas as pd
 import requests
 
 from ..calendar_in import lot_size, strike_step, trading_days_between
 from ..constants import IST
 from ..options.chain import OptionChain, chain_from_records
-from .base import FeedError, normalise_frame
+from .base import FeedError
 
 __all__ = ["NseFeed"]
 

@@ -22,8 +22,7 @@ from .constants import Regime
 from .indicators._util import ensure_ohlcv
 from .indicators.momentum import rsi
 from .indicators.trend import adx, ema, ma_ribbon_score
-from .indicators.volatility import (atr_percentile, choppiness, historical_volatility,
-                                    natr, squeeze)
+from .indicators.volatility import (atr_percentile, choppiness, natr, squeeze)
 
 __all__ = ["RegimeState", "classify_regime", "volatility_state"]
 

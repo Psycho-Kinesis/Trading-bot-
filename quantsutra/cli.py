@@ -20,7 +20,6 @@ import warnings
 import click
 
 from . import __version__
-from .constants import IST
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -155,8 +154,10 @@ def _print_analysis(console, result, issues, show_rules=True):
     if result.get("playbooks"):
         from rich.table import Table
         table = Table(show_header=True, header_style="dim", box=None, padding=(0, 2))
-        table.add_column("Playbook"); table.add_column("Dir"); table.add_column("Conf", justify="right")
-        table.add_column("Trigger", justify="right"); table.add_column("Invalidation", justify="right")
+        for column, justify in (("Playbook", "left"), ("Dir", "left"),
+                                ("Conf", "right"), ("Trigger", "right"),
+                                ("Invalidation", "right")):
+            table.add_column(column, justify=justify)
         table.add_column("Fails when", overflow="fold")
         for pb in result["playbooks"]:
             table.add_row(pb["name"], pb["direction"], f"{pb['confidence']:.2f}",
@@ -168,7 +169,8 @@ def _print_analysis(console, result, issues, show_rules=True):
     if levels:
         from rich.table import Table
         table = Table.grid(padding=(0, 2))
-        table.add_column(style="dim", justify="right"); table.add_column()
+        table.add_column(style="dim", justify="right")
+        table.add_column()
         table.add_row("ATR", str(levels.get("atr")))
         table.add_row("Nearest support", str(levels.get("nearest_support")))
         table.add_row("Nearest resistance", str(levels.get("nearest_resistance")))
@@ -388,14 +390,17 @@ def calendar(symbol, days):
     today = dt.date.today()
 
     table = Table(show_header=True, header_style="dim", box=None, padding=(0, 2))
-    table.add_column("Expiry"); table.add_column("Weekday"); table.add_column("Days away", justify="right")
+    table.add_column("Expiry")
+    table.add_column("Weekday")
+    table.add_column("Days away", justify="right")
     for expiry in expiry_chain(symbol, today, 5):
         table.add_row(expiry.isoformat(), expiry.strftime("%A"), str((expiry - today).days))
     console.print(Panel(table, title=f"{symbol} expiries (lot size {lot_size(symbol)})",
                         border_style="cyan"))
 
     upcoming = Table(show_header=True, header_style="dim", box=None, padding=(0, 2))
-    upcoming.add_column("Date"); upcoming.add_column("Holiday")
+    upcoming.add_column("Date")
+    upcoming.add_column("Holiday")
     found = False
     for date, name in sorted(holidays().items()):
         if today <= date <= today + dt.timedelta(days=days):
@@ -440,7 +445,8 @@ def costs(premium, lots, symbol, moneyness, expiry_day):
     breakeven = model.breakeven_move(premium, quantity, moneyness, expiry_day)
 
     table = Table(show_header=True, header_style="dim", box=None, padding=(0, 2))
-    table.add_column("Component"); table.add_column("Rupees", justify="right")
+    table.add_column("Component")
+    table.add_column("Rupees", justify="right")
     for key, value in breakeven["breakdown"].items():
         if key in ("statutory", "total"):
             continue
@@ -634,8 +640,8 @@ def journal_cmd(journal_path, symbol, limit):
         by_regime = journal.stats_by_regime()
         if by_regime:
             table = Table(show_header=True, header_style="dim", box=None, padding=(0, 2))
-            table.add_column("Regime"); table.add_column("Signals", justify="right")
-            table.add_column("Hit rate", justify="right"); table.add_column("Avg R", justify="right")
+            for column in ("Regime", "Signals", "Hit rate", "Avg R"):
+                table.add_column(column, justify="right" if column != "Regime" else "left")
             for row in by_regime:
                 table.add_row(str(row["regime"]), str(row["signals"]),
                               f"{row['hit_rate']:.0%}" if row["hit_rate"] is not None else "-",

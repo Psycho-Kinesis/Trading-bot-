@@ -22,12 +22,11 @@ import datetime as dt
 from dataclasses import dataclass
 
 import numpy as np
-import pandas as pd
 
 from ..calendar_in import expiry_chain, expiry_context
 from ..constants import Action
 from .chain import OptionChain
-from .pricing import delta_to_strike, greeks, moneyness, time_to_expiry
+from .pricing import greeks, moneyness
 
 __all__ = ["StrikeChoice", "select_strike", "select_expiry", "recommend_contract",
            "MIN_OI_DEFAULT"]

@@ -18,7 +18,6 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-import numpy as np
 
 __all__ = ["SizingResult", "fixed_fractional", "size_option_position",
            "kelly_fraction", "volatility_target_size"]
