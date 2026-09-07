@@ -165,7 +165,7 @@ stop happened to be.
 | Module | What it does |
 |---|---|
 | `calendar_in` | NSE/BSE sessions, holidays, and expiry resolution driven by **effective-dated rules** so a 2023 backtest uses 2023's expiry weekday and lot size |
-| `indicators` | ~60 indicators across trend, momentum, volatility, volume and pivots — including Supertrend, Ichimoku, CPR, anchored VWAP, volume profile, Yang-Zhang volatility, TTM squeeze |
+| `indicators` | 72 indicators across trend, momentum, volatility, volume and pivots — including Supertrend, Ichimoku, CPR, anchored VWAP, volume profile, Yang-Zhang volatility, TTM squeeze |
 | `patterns` | 30+ candlestick patterns with context gating, ZigZag swings, classical formations with measured-move targets, S/R clustering, trendlines, market structure (BOS/CHoCH), fair value gaps, order blocks, liquidity sweeps |
 | `regime` | Regime classification from orthogonal inputs — trend strength, directional alignment, range character, volatility level |
 | `options` | Black-Scholes-Merton with dividend yield and trading-day time, full greeks including vanna/charm/vomma, Brent IV solver, PCR, max pain, OI build-up, IV skew and rank, strategy payoffs, delta-targeted strike selection |
