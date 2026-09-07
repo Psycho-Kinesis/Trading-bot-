@@ -223,3 +223,82 @@ def test_disclaimer_is_present_and_honest(synthetic):
     text = result["disclaimer"].lower()
     assert "not investment advice" in text
     assert "not a prediction" in text
+
+
+def _trending_frame(seed=5, n=400, slope=0.45):
+    """A clean uptrend the engine reliably calls, so the assertions below are
+    about the recommendation text rather than about whether a signal fired."""
+    rng = np.random.default_rng(seed)
+    close = 20000 * np.exp(np.linspace(0, slope, n) + np.cumsum(rng.normal(0, 0.002, n)))
+    frame = pd.DataFrame({
+        "open": close, "high": close * 1.003, "low": close * 0.997,
+        "close": close, "volume": rng.integers(3e5, 9e5, n),
+    }, index=pd.date_range("2023-01-02 15:30", periods=n, freq="B", tz=IST))
+    return frame
+
+
+def _chain_for(spot, dte=6, step=50, lot_size=75):
+    import datetime as _dt
+
+    from quantsutra.options.chain import chain_from_records
+    from quantsutra.options.pricing import bs_price, time_to_expiry
+
+    t = time_to_expiry(dte)
+    base = round(spot / step) * step
+    records = []
+    for strike in np.arange(base - 2000, base + 2050, step):
+        strike = float(strike)
+        m = (strike - spot) / spot
+        iv = 0.125 + 0.9 * m**2 - 0.55 * m
+        oi = int(450_000 * np.exp(-((abs(m) * 100) ** 2) / 9)) + 30_000
+        records += [
+            {"strike": strike, "type": "CE", "ltp": round(bs_price(spot, strike, t, iv, "CE"), 2),
+             "oi": oi, "iv": round(iv * 100, 2), "volume": oi // 3, "oi_change": 8000},
+            {"strike": strike, "type": "PE", "ltp": round(bs_price(spot, strike, t, iv, "PE"), 2),
+             "oi": int(oi * 1.18), "iv": round(iv * 100, 2), "volume": oi // 2, "oi_change": 12000},
+        ]
+    return chain_from_records("NIFTY", spot, _dt.date(2025, 9, 16), records,
+                              dte_trading=dte, lot_size=lot_size, strike_step=step)
+
+
+def test_no_chain_does_not_blame_the_risk_limit():
+    """With no option chain nothing is sized, so the recommendation must say
+    that -- not report 'position size is ZERO at your risk limit', which blames
+    the wrong thing entirely."""
+    frame = _trending_frame()
+    result = analyze("NIFTY", frame, "1d", now=NOW,
+                     config=AnalysisConfig(capital=10_000_000))
+    assert result["signal"]["direction"] == "UP", "fixture should produce a signal"
+    summary = result["recommendation"]["summary"]
+    assert "No option chain was supplied" in summary
+    assert "risk limit" not in summary
+    assert result.get("position") is None
+
+
+def test_zero_size_reports_the_capital_it_would_need():
+    """A zero-lot answer is only useful if it says what would make it non-zero."""
+    frame = _trending_frame()
+    chain = _chain_for(float(frame["close"].iloc[-1]))
+    result = analyze("NIFTY", frame, "1d", chain=chain, now=NOW,
+                     config=AnalysisConfig(capital=100_000, risk_pct=0.01))
+    position = result["position"]
+    assert position["lots"] == 0, "one lot cannot fit a 1% risk budget on Rs.1 lakh"
+    needed = position["capital_needed_for_one_lot"]
+    assert needed > 100_000
+    assert "ZERO at your risk limit" in result["recommendation"]["summary"]
+    assert f"Rs.{needed:,.0f}" in result["recommendation"]["details"][0]
+
+
+def test_size_scales_with_capital():
+    """The same signal must size up as capital grows, staying inside the limit."""
+    frame = _trending_frame()
+    chain = _chain_for(float(frame["close"].iloc[-1]))
+    previous = 0
+    for capital in (1_500_000, 4_000_000, 10_000_000):
+        result = analyze("NIFTY", frame, "1d", chain=chain, now=NOW,
+                         config=AnalysisConfig(capital=capital, risk_pct=0.01))
+        position = result["position"]
+        assert position["lots"] >= previous, "more capital must not mean fewer lots"
+        assert position["risk_pct_of_capital"] <= 0.0101, "risk must stay inside the limit"
+        previous = position["lots"]
+    assert previous >= 2, "the largest account should take more than one lot"

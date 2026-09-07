@@ -211,6 +211,11 @@ def _size_from_chain(cfg, chain, contract, signal, action, ctx) -> dict:
     out = sizing.to_dict()
     out["premium_per_unit"] = round(premium, 2)
     out["total_premium"] = round(premium * sizing.units, 2)
+    if sizing.lots < 1:
+        # Report what it would actually take, rather than only that it is zero.
+        risk_per_lot = max(premium * 0.40, abs(g.delta) * stop_distance)
+        risk_per_lot = min(risk_per_lot, premium) * chain.lot_size
+        out["capital_needed_for_one_lot"] = round(risk_per_lot / max(cfg.risk_pct, 1e-9), 2)
     return out
 
 
@@ -261,10 +266,21 @@ def _build_recommendation(signal, result, playbooks) -> dict:
     lines: list[str] = []
 
     action = result["signal"]["action"]
-    if position.get("lots", 0) < 1:
+    if not position:
+        # No chain means no priced contract, so nothing was sized. Saying "zero
+        # at your risk limit" here would blame the wrong thing entirely.
+        summary = (f"{action} setup identified. No option chain was supplied, so no "
+                   f"strike was priced and no size was computed.")
+        lines.append("The direction, levels and risk geometry are usable as they stand. "
+                     "Supply a chain to get a specific contract and a lot count.")
+    elif position.get("lots", 0) < 1:
+        needed = position.get("capital_needed_for_one_lot")
         summary = f"{action} setup identified, but position size is ZERO at your risk limit."
-        lines.append("The signal is valid; the trade is not takeable at this capital and "
-                     "risk setting. Sizing up to take it anyway is how accounts break.")
+        detail = ("The signal is valid; the trade is not takeable at this capital and "
+                  "risk setting. Sizing up to take it anyway is how accounts break.")
+        if needed:
+            detail += f" One lot would need about Rs.{needed:,.0f} of capital."
+        lines.append(detail)
     else:
         summary = (f"{action}: {position.get('lots')} lot(s), "
                    f"risking about Rs.{position.get('risk_amount', 0):,.0f} "
