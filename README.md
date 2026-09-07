@@ -87,6 +87,15 @@ quantsutra backtest NIFTY --source csv --dir data --mode options --save trades.c
 
 # Historical episodes and what each one teaches
 quantsutra events
+
+# Out-of-sample validation -- does the behaviour survive unseen data?
+quantsutra walkforward NIFTY --source csv --dir data --train 400 --test 300
+
+# Live scan during market hours; journals everything, places no orders
+quantsutra watch NIFTY BANKNIFTY --interval 300 --timeframe 15m --telegram
+
+# Audit the record: hit rate, confidence interval, results by regime
+quantsutra journal
 ```
 
 As a library:
@@ -165,6 +174,8 @@ stop happened to be.
 | `backtest` | Event-driven simulation with no look-ahead, realistic fills, and metrics that report Wilson confidence intervals rather than presenting a small sample as evidence |
 | `knowledge` | 15 curated Indian market episodes with the lesson each teaches, recurring calendar events keyed by their IV signature, and a historical analogue finder |
 | `data` | Yahoo chart endpoint, NSE option chain, local CSV/parquet, plus a regime-switching synthetic generator and a data-quality validator |
+| `live` | Session-aware scanning loop, deduplicating notifier (console + Telegram), and a SQLite journal that logs every signal — including the no-trades — so the record can be audited |
+| `brokers` | Paper broker for forward testing: market orders cross the spread, stops slip past their trigger, every fill is charged. No live-order integration, deliberately |
 
 ---
 
@@ -194,6 +205,13 @@ an opinion is a system with no filter.
 report the Wilson confidence interval on the win rate and flag when it
 straddles 50%, when one trade produced most of the profit, and when a strategy
 is profitable gross but not net.
+
+**Walk-forward is where most strategies die.** `quantsutra walkforward` splits
+history into consecutive in-sample/out-of-sample folds and reports the
+*efficiency ratio* — out-of-sample expectancy divided by in-sample expectancy.
+On synthetic data the shipped ruleset scores 0.04 and is correctly labelled
+`LIKELY_OVERFIT`. Run it on your own data before believing any backtest,
+including one from this tool.
 
 ---
 

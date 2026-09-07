@@ -286,7 +286,11 @@ def regime(symbol, source, directory, interval, lookback):
 @click.option("--save", default=None, help="Write the trade log to this CSV path.")
 def backtest(symbol, source, directory, lookback, capital, risk_pct, mode, max_hold,
              warmup, costs, save):
-    """Walk-forward backtest with realistic Indian transaction costs."""
+    """Bar-by-bar backtest with realistic Indian transaction costs.
+
+    For out-of-sample validation use `quantsutra walkforward` instead -- a
+    single backtest over one history proves very little on its own.
+    """
     from .backtest import BacktestConfig, Backtester
     from .report.console import render_backtest
 
@@ -313,6 +317,57 @@ def backtest(symbol, source, directory, lookback, capital, risk_pct, mode, max_h
     if save and len(result.trades):
         result.trades.to_csv(save, index=False)
         console.print(f"[green]Trade log written to {save}[/green]")
+
+
+@cli.command("walkforward")
+@click.argument("symbol", default="NIFTY")
+@click.option("--source", type=click.Choice(["yahoo", "csv", "synthetic"]), default="synthetic")
+@click.option("--dir", "directory", default="data")
+@click.option("--lookback", default=1600, help="Total bars of history to split.")
+@click.option("--train", "train_bars", default=400, help="In-sample bars per fold.")
+@click.option("--test", "test_bars", default=300, help="Out-of-sample bars per fold.")
+@click.option("--warmup", default=250)
+@click.option("--capital", default=1_000_000.0)
+@click.option("--mode", type=click.Choice(["options", "index"]), default="options")
+def walkforward(symbol, source, directory, lookback, train_bars, test_bars, warmup,
+                capital, mode):
+    """Out-of-sample validation: does the behaviour survive unseen data?
+
+    Reports the efficiency ratio -- out-of-sample expectancy divided by
+    in-sample expectancy. A ratio near 1 means it generalised; near 0 means the
+    in-sample result was fitting.
+    """
+    from rich.panel import Panel
+    from rich.text import Text
+
+    from .backtest import BacktestConfig, walk_forward
+
+    console = _console()
+    frame, issues = _load_history(symbol, source, "1d", lookback, directory)
+    for issue in issues:
+        console.print(f"[yellow]! {issue}[/yellow]")
+
+    console.print(f"[dim]Running walk-forward over {len(frame)} bars "
+                  f"({train_bars} train / {test_bars} test per fold). This runs a full "
+                  f"backtest per fold, so it takes a while.[/dim]")
+    config = BacktestConfig(symbol=symbol, mode=mode, initial_capital=capital,
+                            warmup_bars=warmup)
+    try:
+        result = walk_forward(frame, config, train_bars=train_bars, test_bars=test_bars,
+                              progress=True)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if not result.folds:
+        raise click.ClickException(
+            "No folds completed. Increase --lookback or reduce --train/--test.")
+
+    efficiency = result.efficiency()
+    style = {"GENERALISED": "green", "FAILED_OUT_OF_SAMPLE": "red",
+             "LIKELY_OVERFIT": "red", "INCONSISTENT": "yellow"}.get(
+        efficiency["verdict"], "yellow")
+    console.print(Panel(Text(result.summary()), title="Walk-forward",
+                        border_style=style))
 
 
 @cli.command()
@@ -480,6 +535,125 @@ def demo(capital):
                      india_vix=float(vix_history.iloc[-1]), vix_history=vix_history,
                      config=AnalysisConfig(capital=capital))
     _print_analysis(console, result, result.get("data_quality", []))
+
+
+@cli.command()
+@click.argument("symbols", nargs=-1)
+@click.option("--interval", default=300, help="Seconds between scans.")
+@click.option("--timeframe", default="15m", help="Bar interval to analyse.")
+@click.option("--capital", default=500_000.0)
+@click.option("--risk", "risk_pct", default=1.0)
+@click.option("--chain/--no-chain", default=False, help="Fetch the NSE option chain.")
+@click.option("--telegram", is_flag=True,
+              help="Also send to Telegram (needs TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID).")
+@click.option("--journal", "journal_path", default="quantsutra_journal.sqlite")
+@click.option("--once", is_flag=True, help="Scan once and exit.")
+def watch(symbols, interval, timeframe, capital, risk_pct, chain, telegram,
+          journal_path, once):
+    """Scan SYMBOLS on a loop during market hours and alert on changes.
+
+    Places no orders. Every signal, actionable or not, is written to the
+    journal so the record can be audited later.
+    """
+    from .analysis import AnalysisConfig
+    from .live import ConsoleSink, LiveScanner, Notifier, ScannerConfig, TelegramSink
+
+    console = _console()
+    symbols = tuple(s.upper() for s in symbols) or ("NIFTY",)
+
+    sinks = [ConsoleSink()]
+    if telegram:
+        sink = TelegramSink()
+        if not sink.configured:
+            raise click.ClickException(
+                "Telegram needs TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in the "
+                "environment. They are read from there deliberately so credentials "
+                "never land in a config file.")
+        sinks.append(sink)
+
+    config = ScannerConfig(
+        symbols=symbols, interval_seconds=interval, timeframe=timeframe,
+        fetch_chain=chain, journal_path=journal_path,
+        analysis=AnalysisConfig(capital=capital, risk_pct=risk_pct / 100),
+        max_iterations=1 if once else None,
+    )
+    scanner = LiveScanner(config, notifier=Notifier(sinks=sinks))
+    console.print(f"[cyan]Watching {', '.join(symbols)} on {timeframe} every "
+                  f"{interval}s. Analysis only -- no orders are placed.[/cyan]")
+    try:
+        if once:
+            for result in scanner.scan_once():
+                if "error" in result:
+                    console.print(f"[red]{result['symbol']}: {result['error']}[/red]")
+                else:
+                    _print_analysis(console, result, result.get("data_quality", []),
+                                    show_rules=False)
+        else:
+            scanner.run()
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Stopped.[/yellow]")
+    finally:
+        scanner.close()
+
+
+@cli.command("journal")
+@click.option("--path", "journal_path", default="quantsutra_journal.sqlite")
+@click.option("--symbol", default=None)
+@click.option("--limit", default=15)
+def journal_cmd(journal_path, symbol, limit):
+    """Audit the signal log: hit rate, confidence interval, results by regime."""
+    from pathlib import Path
+
+    from rich.panel import Panel
+    from rich.table import Table
+    from rich.text import Text
+
+    from .live import Journal
+
+    console = _console()
+    if not Path(journal_path).exists():
+        raise click.ClickException(
+            f"No journal at {journal_path}. Run `quantsutra watch` to start one.")
+
+    with Journal(journal_path) as journal:
+        stats = journal.hit_rate(symbol)
+        body = Text()
+        body.append(f"  Actionable signals : {stats['actionable_signals']}\n")
+        body.append(f"  Resolved           : {stats['resolved']}\n")
+        body.append(f"  Unresolved         : {stats['unresolved']}\n")
+        if stats.get("hit_rate") is not None:
+            low, high = stats["hit_rate_ci"]
+            body.append(f"  Hit rate           : {stats['hit_rate']:.1%} "
+                        f"(95% CI {low:.0%}-{high:.0%})\n")
+            if stats.get("avg_r") is not None:
+                body.append(f"  Average R          : {stats['avg_r']:+.2f}\n")
+        if stats.get("note"):
+            body.append(f"\n  {stats['note']}\n", style="yellow")
+        console.print(Panel(body, title="Realised record", border_style="cyan"))
+
+        by_regime = journal.stats_by_regime()
+        if by_regime:
+            table = Table(show_header=True, header_style="dim", box=None, padding=(0, 2))
+            table.add_column("Regime"); table.add_column("Signals", justify="right")
+            table.add_column("Hit rate", justify="right"); table.add_column("Avg R", justify="right")
+            for row in by_regime:
+                table.add_row(str(row["regime"]), str(row["signals"]),
+                              f"{row['hit_rate']:.0%}" if row["hit_rate"] is not None else "-",
+                              f"{row['avg_r']:+.2f}" if row["avg_r"] is not None else "-")
+            console.print(Panel(table, title="By regime", border_style="blue"))
+
+        recent = journal.recent(symbol, limit)
+        if recent:
+            table = Table(show_header=True, header_style="dim", box=None, padding=(0, 1))
+            for column in ("id", "created_at", "symbol", "action", "conf", "spot", "regime"):
+                table.add_column(column)
+            for row in recent:
+                table.add_row(str(row["id"]), str(row["created_at"])[:16], row["symbol"],
+                              row["action"] or "-",
+                              f"{row['confidence']:.0f}" if row["confidence"] else "-",
+                              f"{row['spot']:.0f}" if row["spot"] else "-",
+                              row["regime"] or "-")
+            console.print(Panel(table, title="Recent signals", border_style="dim"))
 
 
 @cli.command()
