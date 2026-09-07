@@ -146,6 +146,11 @@ def _print_analysis(console, result, issues, show_rules=True):
     console.print(render_signal(result["signal"], show_rules=show_rules))
     console.print(render_regime(result["signal"]["regime"]))
 
+    # The contract, structure and size live at the top level of the result, not
+    # inside the signal, so render_signal does not pick them up. They are the
+    # whole point of an options recommendation -- show them.
+    _print_trade_blocks(console, result)
+
     rec = result.get("recommendation") or {}
     if rec:
         body = Text()
@@ -204,6 +209,82 @@ def _print_analysis(console, result, issues, show_rules=True):
     console.print(Panel(Text(result["disclaimer"], style="dim italic"),
                         border_style="red", title="Read this"))
 
+
+def _print_trade_blocks(console, result) -> None:
+    """Render the resolved option legs, the structure payoff and the size."""
+    from rich.console import Group
+    from rich.panel import Panel
+    from rich.table import Table
+    from rich.text import Text
+
+    contract = result.get("contract") or {}
+    strategy = result.get("strategy") or {}
+    position = result.get("position") or {}
+    costs = result.get("costs") or {}
+
+    if contract.get("strikes"):
+        table = Table(show_header=True, header_style="dim", box=None, padding=(0, 2))
+        for column in ("Leg", "Strike", "Premium", "IV"):
+            table.add_column(column, justify="right" if column != "Leg" else "left")
+        for role, strike in contract["strikes"].items():
+            premium = (contract.get("premiums") or {}).get(role)
+            iv = (contract.get("ivs") or {}).get(role)
+            table.add_row(role.replace("_", " ").upper(), f"{strike:,.0f}",
+                          f"{premium:,.2f}" if premium is not None else "-",
+                          f"{iv:.1f}" if iv is not None else "-")
+        body = [table]
+        if not contract.get("complete"):
+            body.append(Text(f"\n  INCOMPLETE: could not price leg(s) "
+                             f"{contract.get('missing_legs')}. Do not place a partial "
+                             f"structure.", style="bold red"))
+        for reason in contract.get("reasons", [])[:5]:
+            body.append(Text(f"  {reason}", style="dim"))
+        console.print(Panel(Group(*body), title="Option contract", border_style="magenta"))
+    elif result.get("contract_note"):
+        console.print(Panel(Text(result["contract_note"], style="yellow"),
+                            title="No contract selected", border_style="yellow"))
+
+    if strategy:
+        table = Table.grid(padding=(0, 2))
+        table.add_column(style="dim", justify="right")
+        table.add_column()
+        table.add_row("Structure", f"{strategy.get('name')} ({strategy.get('type')})")
+        table.add_row("Cash flow", f"Rs.{strategy.get('cash_flow', 0):,.2f}")
+        table.add_row("Max profit", str(strategy.get("max_profit")))
+        table.add_row("Max loss", str(strategy.get("max_loss")))
+        table.add_row("Breakeven(s)", str(strategy.get("breakevens")))
+        if strategy.get("reward_risk") is not None:
+            table.add_row("Reward/risk", str(strategy["reward_risk"]))
+        greeks = strategy.get("greeks") or {}
+        if greeks:
+            table.add_row("Net delta", str(greeks.get("delta")))
+            table.add_row("Theta / day", f"Rs.{greeks.get('theta_per_day', 0):,.0f}")
+            table.add_row("Vega / vol pt", f"Rs.{greeks.get('vega_per_vol_pt', 0):,.0f}")
+        style = "green" if strategy.get("risk_defined") else "red"
+        items = [table]
+        for note in strategy.get("notes", []):
+            items.append(Text(f"  {note}", style="yellow"))
+        console.print(Panel(Group(*items), title="Structure", border_style=style))
+
+    if position:
+        table = Table.grid(padding=(0, 2))
+        table.add_column(style="dim", justify="right")
+        table.add_column()
+        table.add_row("Lots", str(position.get("lots")))
+        table.add_row("Units", str(position.get("units")))
+        table.add_row("Premium outlay", f"Rs.{position.get('total_premium', 0):,.0f}")
+        table.add_row("Risk at stop", f"Rs.{position.get('risk_amount', 0):,.0f}")
+        table.add_row("Risk % of capital",
+                      f"{position.get('risk_pct_of_capital', 0) * 100:.2f}%")
+        if costs.get("estimated_round_trip"):
+            table.add_row("Round-trip cost", f"Rs.{costs['estimated_round_trip']:,.0f}")
+        items = [table]
+        for reason in position.get("reasons", []):
+            items.append(Text(f"  {reason}", style="dim"))
+        for warning in position.get("warnings", []):
+            items.append(Text(f"  ! {warning}", style="yellow"))
+        style = "green" if position.get("lots", 0) >= 1 else "red"
+        console.print(Panel(Group(*items), title="Position size", border_style=style))
 
 @cli.command()
 @click.argument("symbol", default="NIFTY")

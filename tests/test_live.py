@@ -172,3 +172,71 @@ def test_scanner_survives_a_broken_feed(tmp_path):
         assert all("error" in r for r in results), "one bad symbol must not stop the loop"
     finally:
         scanner.close()
+
+
+# --- CLI rendering --------------------------------------------------------
+
+def test_cli_renders_contract_structure_and_size(capsys):
+    """The contract, structure and size live at the top level of the analyze
+    result, not inside the signal. They were computed but never displayed --
+    which is the whole point of an options recommendation."""
+    from rich.console import Console
+
+    from quantsutra.cli import _print_analysis
+
+    result = {
+        "signal": {
+            "symbol": "NIFTY", "timeframe": "1d", "spot": 26691.91,
+            "direction": "UP", "action": "BUY_CALL", "confidence": 66.1,
+            "raw_score": 0.24, "entry": 26691.91, "stop_loss": 26278.2,
+            "targets": [27312.5], "risk_reward": 1.5, "vetoes": [], "warnings": [],
+            "reasons": ["[^] trend up"], "rules": [], "category_scores": {},
+            "actionable": True,
+            "regime": {"regime": "UPTREND", "trend_score": 0.5, "trend_strength": 0.6,
+                       "volatility_state": "LOW", "adx": 22.0, "choppiness": 40.0,
+                       "atr_percentile": 50.0, "notes": []},
+        },
+        "contract": {"strikes": {"long_ce": 26800.0}, "premiums": {"long_ce": 139.58},
+                     "ivs": {"long_ce": 11.8}, "complete": True,
+                     "reasons": ["Chose 26800 CE for delta 0.43."]},
+        "strategy": {"name": "Buy Call", "type": "DEBIT", "cash_flow": -10468.5,
+                     "max_profit": "UNLIMITED", "max_loss": -10468.5,
+                     "breakevens": [26939.58], "risk_defined": True, "notes": [],
+                     "greeks": {"delta": 32.34, "theta_per_day": -1022.0,
+                                "vega_per_vol_pt": 1108.0}},
+        "position": {"lots": 1, "units": 75, "total_premium": 10468.0,
+                     "risk_amount": 10468.0, "risk_pct_of_capital": 0.007,
+                     "reasons": [], "warnings": []},
+        "costs": {"estimated_round_trip": 101.0},
+        "recommendation": {"summary": "BUY_CALL: 1 lot(s)", "details": []},
+        "disclaimer": "not investment advice",
+    }
+    _print_analysis(Console(width=100), result, [], show_rules=False)
+    out = capsys.readouterr().out
+    assert "26,800" in out, "the chosen strike must be shown"
+    assert "Structure" in out and "Breakeven" in out
+    assert "Position size" in out and "Lots" in out
+    assert "Round-trip cost" in out
+
+
+def test_cli_explains_a_missing_option_chain(capsys):
+    from rich.console import Console
+
+    from quantsutra.cli import _print_analysis
+
+    result = {
+        "signal": {"symbol": "NIFTY", "timeframe": "1d", "spot": 25000.0,
+                   "direction": "NEUTRAL", "action": "NO_TRADE", "confidence": 40.0,
+                   "raw_score": 0.0, "vetoes": [], "warnings": [], "reasons": [],
+                   "rules": [], "category_scores": {}, "actionable": False,
+                   "targets": [],
+                   "regime": {"regime": "RANGE", "trend_score": 0.0,
+                              "trend_strength": 0.1, "volatility_state": "NORMAL",
+                              "adx": 15.0, "choppiness": 60.0, "atr_percentile": 50.0,
+                              "notes": []}},
+        "contract_note": "No option chain supplied, so no strike could be selected.",
+        "recommendation": {"summary": "Stand aside.", "details": []},
+        "disclaimer": "not investment advice",
+    }
+    _print_analysis(Console(width=100), result, [], show_rules=False)
+    assert "No option chain supplied" in capsys.readouterr().out
