@@ -310,7 +310,11 @@ def confluence_zones(levels: list[Level], atr_value: float, min_sources: int = 2
             zones.append([lv])
     out = []
     for zone in zones:
-        sources = {lv.source for lv in zone}
+        # A level promoted by reinforce_with_round_numbers carries a composite
+        # source ("swing+round"); split it so the zone lists each distinct
+        # source once instead of printing "round_number+swing+round".
+        sources = {part for lv in zone for part in lv.source.split("+")}
+        sources = {"round_number" if s == "round" else s for s in sources}
         if len(sources) < min_sources:
             continue
         out.append({
