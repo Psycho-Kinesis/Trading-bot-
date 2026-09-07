@@ -93,17 +93,33 @@ def generate_intraday_series(
     rows, stamps = [], []
 
     for ts, bar in daily.iterrows():
-        o, h, lo, c = float(bar["open"]), float(bar["high"]), float(bar["low"]), float(bar["close"])
+        day_open = float(bar["open"])
+        day_high = float(bar["high"])
+        day_low = float(bar["low"])
+        day_close = float(bar["close"])
+        day_range = day_high - day_low
         day_volume = float(bar.get("volume", 0) or 0)
 
         steps = np.cumsum(rng.standard_normal(per_day))
         steps -= np.linspace(0, steps[-1], per_day)          # bridge: ends at zero
-        path = np.linspace(o, c, per_day) + steps * (h - lo) * 0.18
+        path = np.linspace(day_open, day_close, per_day) + steps * day_range * 0.18
 
         span = path.max() - path.min()
         if span > 0:
-            path = lo + (path - path.min()) * (h - lo) / span
-        path[0], path[-1] = o, c
+            path = day_low + (path - path.min()) * day_range / span
+        # The endpoints are fixed to the day's open and close, which can destroy
+        # the extremes the stretch just created. Clip back into range, then plant
+        # the day's high and low on interior bars so the expanded session really
+        # does reproduce the daily bar it came from.
+        path[0], path[-1] = day_open, day_close
+        path = np.clip(path, day_low, day_high)
+        if per_day >= 4 and day_range > 0:
+            high_at = 1 + int(np.argmax(path[1:-1]))
+            low_at = 1 + int(np.argmin(path[1:-1]))
+            if high_at == low_at:
+                low_at = 1 if high_at != 1 else per_day - 2
+            path[high_at] = day_high
+            path[low_at] = day_low
 
         # U-shaped volume profile: heavy at the open and into the close.
         shape = np.linspace(-1, 1, per_day)
@@ -112,10 +128,14 @@ def generate_intraday_series(
 
         session_start = ts.replace(hour=9, minute=15, second=0, microsecond=0)
         for i in range(per_day):
-            prev = path[i - 1] if i else o
-            hi = max(prev, path[i]) + abs(rng.normal(0, (h - lo) * 0.03))
-            lo = min(prev, path[i]) - abs(rng.normal(0, (h - lo) * 0.03))
-            rows.append((prev, min(hi, h), max(lo, lo), path[i], day_volume * weights[i]))
+            prev = path[i - 1] if i else day_open
+            wick = day_range * 0.03
+            bar_high = max(prev, path[i]) + abs(rng.normal(0, wick))
+            bar_low = min(prev, path[i]) - abs(rng.normal(0, wick))
+            # Clamp each bar inside the day's true range so the expanded series
+            # still reproduces the daily OHLC it came from.
+            rows.append((prev, min(bar_high, day_high), max(bar_low, day_low),
+                         path[i], day_volume * weights[i]))
             stamps.append(session_start + dt.timedelta(minutes=minutes * (i + 1)))
 
     frame = pd.DataFrame(rows, columns=["open", "high", "low", "close", "volume"],

@@ -85,9 +85,13 @@ def signal(symbol, source, directory, interval, lookback, capital, risk_pct,
     console = _console()
     frame, issues = _load_history(symbol, source, interval, lookback, directory)
 
-    higher = None
-    if interval == "1d" and len(frame) > 120:
-        higher = resample_ohlcv(frame, "1W")
+    higher, higher_name = None, "1wk"
+    if len(frame) > 120:
+        rule = {"1d": ("1W", "1wk"), "1h": ("1D", "1d"), "60m": ("1D", "1d"),
+                "30m": ("1h", "1h"), "15m": ("1h", "1h"),
+                "5m": ("1h", "1h"), "1m": ("15min", "15m")}.get(interval)
+        if rule:
+            higher, higher_name = resample_ohlcv(frame, rule[0]), rule[1]
 
     option_chain, vix, vix_history = None, None, None
     if chain:
@@ -110,8 +114,8 @@ def signal(symbol, source, directory, interval, lookback, capital, risk_pct,
             pass
 
     result = analyze(
-        symbol, frame, interval, higher_tf=higher, chain=option_chain,
-        india_vix=vix, vix_history=vix_history,
+        symbol, frame, interval, higher_tf=higher, higher_tf_name=higher_name,
+        chain=option_chain, india_vix=vix, vix_history=vix_history,
         config=AnalysisConfig(capital=capital, risk_pct=risk_pct / 100,
                               target_delta=target_delta),
     )

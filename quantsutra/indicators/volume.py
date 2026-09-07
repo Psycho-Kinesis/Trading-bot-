@@ -179,14 +179,18 @@ def volume_profile(
     hist = np.zeros(bins)
 
     # Spread each bar's volume uniformly across the bins its range covers.
-    for h, lo, v in zip(d["high"].to_numpy(float), d["low"].to_numpy(float), d["volume"].to_numpy(float)):
-        if not np.isfinite(v) or v <= 0 or not np.isfinite(h) or not np.isfinite(lo):
+    highs = d["high"].to_numpy(float)
+    lows = d["low"].to_numpy(float)
+    volumes = d["volume"].to_numpy(float)
+    for bar_high, bar_low, bar_volume in zip(highs, lows, volumes):
+        if (not np.isfinite(bar_volume) or bar_volume <= 0
+                or not np.isfinite(bar_high) or not np.isfinite(bar_low)):
             continue
-        start = np.searchsorted(edges, lo, side="right") - 1
-        end = np.searchsorted(edges, h, side="left")
+        start = np.searchsorted(edges, bar_low, side="right") - 1
+        end = np.searchsorted(edges, bar_high, side="left")
         start = max(0, min(start, bins - 1))
         end = max(start + 1, min(end, bins))
-        hist[start:end] += v / (end - start)
+        hist[start:end] += bar_volume / (end - start)
 
     if hist.sum() <= 0:
         return {"poc": np.nan, "vah": np.nan, "val": np.nan, "levels": [], "volumes": []}

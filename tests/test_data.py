@@ -38,11 +38,23 @@ def test_synthetic_vix_is_negatively_correlated_with_returns(synthetic):
 
 
 def test_intraday_expansion_respects_the_daily_range(synthetic):
+    """Each expanded day must reproduce the daily bar it came from -- both ends.
+
+    Checking only the high once let a clamp regression through: the low bound
+    had been dropped and intraday bars were printing below the day's low.
+    """
     daily = synthetic.tail(3)
     intraday = generate_intraday_series(daily, minutes=5)
     assert len(intraday) == 3 * 75
-    first_day = intraday[intraday.index.date == intraday.index[0].date()]
-    assert first_day["high"].max() == pytest.approx(float(daily["high"].iloc[0]), rel=1e-6)
+
+    for offset in range(3):
+        day = daily.index[offset].date()
+        bars = intraday[intraday.index.date == day]
+        assert len(bars) == 75
+        assert bars["high"].max() == pytest.approx(float(daily["high"].iloc[offset]), rel=1e-6)
+        assert bars["low"].min() == pytest.approx(float(daily["low"].iloc[offset]), rel=1e-6)
+        assert bars["high"].max() <= float(daily["high"].iloc[offset]) + 1e-6
+        assert bars["low"].min() >= float(daily["low"].iloc[offset]) - 1e-6
 
 
 def test_validator_catches_corrupt_bars(synthetic):

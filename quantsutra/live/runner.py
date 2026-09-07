@@ -69,11 +69,13 @@ class LiveScanner:
         from ..data.base import resample_ohlcv
 
         bars = self.feed.history(symbol, self.config.timeframe, self.config.lookback)
-        higher = None
+        higher, higher_name = None, "1wk"
         if self.config.timeframe in ("5m", "15m", "30m"):
-            higher = resample_ohlcv(bars, "1h")
+            higher, higher_name = resample_ohlcv(bars, "1h"), "1h"
+        elif self.config.timeframe in ("1h", "60m"):
+            higher, higher_name = resample_ohlcv(bars, "1D"), "1d"
         elif self.config.timeframe == "1d":
-            higher = resample_ohlcv(bars, "1W")
+            higher, higher_name = resample_ohlcv(bars, "1W"), "1wk"
 
         chain, vix = None, None
         if self.config.fetch_chain:
@@ -88,8 +90,8 @@ class LiveScanner:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             result = analyze(symbol, bars, self.config.timeframe, higher_tf=higher,
-                             chain=chain, india_vix=vix, now=now,
-                             config=self.config.analysis)
+                             higher_tf_name=higher_name, chain=chain, india_vix=vix,
+                             now=now, config=self.config.analysis)
 
         signal_id = self.journal.log_signal(result.get("signal", {}), payload=result)
         result["journal_id"] = signal_id

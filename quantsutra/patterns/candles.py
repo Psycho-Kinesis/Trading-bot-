@@ -123,7 +123,7 @@ def detect_candles(
 
     o = d["open"].to_numpy(float)
     h = d["high"].to_numpy(float)
-    lo = d["low"].to_numpy(float)
+    low = d["low"].to_numpy(float)
     c = d["close"].to_numpy(float)
     body_pct = a["body_pct"].to_numpy(float)
     upper_pct = a["upper_pct"].to_numpy(float)
@@ -209,7 +209,7 @@ def detect_candles(
 
             # Piercing / dark cloud need a gap open against the prior close.
             mid_p = (o[p] + c[p]) / 2
-            if bear[p] and bull[i] and o[i] < lo[p] and c[i] > mid_p and c[i] < o[p]:
+            if bear[p] and bull[i] and o[i] < low[p] and c[i] > mid_p and c[i] < o[p]:
                 add("piercing_line", i, 0.55 + (c[i] - mid_p) / max(o[p] - c[p], 1e-9) * 0.3,
                     prior == -1, "gapped down and recovered past the midpoint")
             if bull[p] and bear[i] and o[i] > h[p] and c[i] < mid_p and c[i] > o[p]:
@@ -218,20 +218,20 @@ def detect_candles(
 
             tol = 0.1 * np.nanmean([a["range"].to_numpy(float)[p], a["range"].to_numpy(float)[i]])
             if tol > 0:
-                if abs(lo[i] - lo[p]) <= tol and prior == -1 and bull[i]:
+                if abs(low[i] - low[p]) <= tol and prior == -1 and bull[i]:
                     add("tweezer_bottom", i, 0.45, True, "matched lows rejected twice")
                 if abs(h[i] - h[p]) <= tol and prior == 1 and bear[i]:
                     add("tweezer_top", i, 0.45, True, "matched highs rejected twice")
 
             # Kicker: a gap in the opposite direction with no overlap at all.
-            if bear[p] and bull[i] and o[i] > o[p] and lo[i] > h[p]:
+            if bear[p] and bull[i] and o[i] > o[p] and low[i] > h[p]:
                 add("bullish_kicker", i, 0.75, True, "full gap reversal, no overlap")
-            if bull[p] and bear[i] and o[i] < o[p] and h[i] < lo[p]:
+            if bull[p] and bear[i] and o[i] < o[p] and h[i] < low[p]:
                 add("bearish_kicker", i, 0.75, True, "full gap reversal, no overlap")
 
-            if h[i] <= h[p] and lo[i] >= lo[p]:
+            if h[i] <= h[p] and low[i] >= low[p]:
                 add("inside_bar", i, 0.3, True, "compression, awaiting expansion")
-            if h[i] > h[p] and lo[i] < lo[p]:
+            if h[i] > h[p] and low[i] < low[p]:
                 add("outside_bar", i, 0.35, True, "both sides taken out")
 
         # ---- three-bar --------------------------------------------------
@@ -262,7 +262,7 @@ def detect_candles(
             inside_p = max(o[p], c[p]) < max(o[q], c[q]) and min(o[p], c[p]) > min(o[q], c[q])
             if inside_p and bear[q] and bull[p] and bull[i] and c[i] > h[q]:
                 add("three_inside_up", i, 0.7, prior == -1, "harami confirmed by a breakout close")
-            if inside_p and bull[q] and bear[p] and bear[i] and c[i] < lo[q]:
+            if inside_p and bull[q] and bear[p] and bear[i] and c[i] < low[q]:
                 add("three_inside_down", i, 0.7, prior == 1, "harami confirmed by a breakdown close")
             if bear[q] and bull[p] and c[p] > o[q] and o[p] < c[q] and bull[i] and c[i] > c[p]:
                 add("three_outside_up", i, 0.7, prior == -1, "engulfing confirmed the next bar")
@@ -275,11 +275,11 @@ def detect_candles(
             mids = range(i - 3, i)
             if bull[first] and bull[last] and c[last] > c[first] and rel_body[first] > 1.0 and \
                all(bear[m] or body_pct[m] < 0.4 for m in mids) and \
-               all(h[m] <= h[first] and lo[m] >= lo[first] for m in mids):
+               all(h[m] <= h[first] and low[m] >= low[first] for m in mids):
                 add("rising_three_methods", i, 0.65, True, "shallow pause inside a strong up bar")
             if bear[first] and bear[last] and c[last] < c[first] and rel_body[first] > 1.0 and \
                all(bull[m] or body_pct[m] < 0.4 for m in mids) and \
-               all(h[m] <= h[first] and lo[m] >= lo[first] for m in mids):
+               all(h[m] <= h[first] and low[m] >= low[first] for m in mids):
                 add("falling_three_methods", i, 0.65, True, "shallow pause inside a strong down bar")
 
     return out
