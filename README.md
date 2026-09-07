@@ -46,23 +46,44 @@ you can afford to lose entirely.
 
 ## Install
 
+Python 3.10 or newer. No TA-Lib, no compiled extensions — it installs anywhere
+Python does.
+
 ```bash
-git clone <this repo> && cd Trading-bot-
+git clone -b claude/trading-bot-indian-markets-3n42wr \
+    https://github.com/Psycho-Kinesis/Trading-bot-
+cd Trading-bot-
+
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+
 pip install -e .
 ```
 
-Python 3.10+. Core dependencies are numpy, pandas, scipy, requests, PyYAML,
-click and rich — no TA-Lib, no compiled extensions.
-
-## Try it without any data or network
+Then confirm it works — this needs no network and no data:
 
 ```bash
 quantsutra demo
 ```
 
-Runs the entire pipeline on generated data and prints the full report:
+That runs the entire pipeline on generated data and prints the full report:
 signal, regime, evidence by family, every rule that fired, vetoes, levels,
-option chain analytics, event risk and historical context.
+option chain analytics, event risk and historical context. If you see that,
+the install is good.
+
+### About the live data feeds
+
+`--chain` (NSE) and the default Yahoo feed **work from a home connection but
+usually not from a cloud host, VPN or corporate network** — NSE blocks
+datacentre IP ranges, and both are unofficial endpoints with no uptime
+guarantee. If you get a connection error, that is what happened; the error
+message says so and points at the alternatives.
+
+For anything you trade real money on, do not rely on either. Export history
+from your broker (Zerodha, Angel One, Fyers and Upstox all provide it), drop
+the files in a folder, and use `--source csv --dir <folder>`. The loader
+accepts the usual broker column namings, and validates the data before
+analysing it.
 
 ## Real usage
 
