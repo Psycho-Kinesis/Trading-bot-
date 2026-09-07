@@ -39,6 +39,19 @@ Any backtest here produces dozens to a few hundred trades. A 60% win rate over
 "no edge at all". The metrics report this interval and flag when it straddles
 50%, but no amount of reporting turns a small sample into evidence.
 
+## 3a. The shipped ruleset has not been shown to generalise
+
+Run `quantsutra walkforward` and read the efficiency ratio — out-of-sample
+expectancy divided by in-sample expectancy. On the package's own synthetic data
+the ruleset scores **0.04** and is labelled `LIKELY_OVERFIT`. That is the
+expected result on a series with no real structure, and it is reported rather
+than hidden, but it is also the honest starting position: **no evidence has
+been produced that these rules generalise on real Indian index data.**
+
+Producing that evidence is your job, not the tool's, and it requires your own
+history. Until you have run walk-forward on real data and seen an efficiency
+ratio hold up across folds, treat every signal as a hypothesis.
+
 ## 4. Contract specifications drift
 
 Lot sizes and expiry weekdays are set by exchange circular and changed several
