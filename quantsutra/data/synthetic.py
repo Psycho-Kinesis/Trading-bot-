@@ -5,6 +5,27 @@ network connection or a paid data subscription.  The generator is a
 regime-switching model with fat tails, volatility clustering and overnight
 gaps, which is closer to an index than plain geometric Brownian motion.
 
+**The tails are calibrated deliberately.**  An earlier version compounded three
+multiplicative sources of tail risk (a fat-tailed volatility shock, a
+fat-tailed return draw and a regime multiplier) and produced kurtosis near 18
+with 9-12% single days.  That is not a harmless inaccuracy for this package:
+long-option payoffs are convex, so an overstated tail inflates every
+options-mode backtest run against it.  The volatility process is now bounded
+and the standardised shock clipped, giving roughly:
+
+===========================  ==================  =========================
+Statistic                    This generator      NIFTY 50, long run
+===========================  ==================  =========================
+Annualised volatility        14-16%              13-18% (calm), 20-30%+ (stressed)
+Daily \|move\| > 2%            3-5% of days       ~3-5% of days
+Daily \|move\| > 3%            ~1% of days        ~1% of days
+Daily \|move\| > 5%            <0.3% of days      rare outside crises
+Worst single day             around -5%          -13% (Mar 2020) in a crisis
+===========================  ==================  =========================
+
+It therefore does **not** reproduce crisis behaviour -- there is no March-2020
+in it. Stress-test against real history, not against this.
+
 Nothing produced here is real market data, and a strategy that works on it has
 demonstrated nothing except that it runs.
 """
@@ -25,9 +46,16 @@ __all__ = ["generate_index_series", "generate_intraday_series", "generate_vix_se
 def generate_index_series(
     start_price: float = 22000.0, days: int = 750, seed: int = 7,
     start_date: dt.date | None = None, annual_drift: float = 0.11,
-    base_vol: float = 0.13, regime_persistence: float = 0.985,
+    base_vol: float = 0.12, regime_persistence: float = 0.985,
+    stress_vol_multiplier: float = 1.8, max_vol_multiplier: float = 2.8,
+    max_shock_sigma: float = 3.8,
 ) -> pd.DataFrame:
-    """Daily OHLCV with volatility clustering, regime shifts and gaps."""
+    """Daily OHLCV with volatility clustering, regime shifts and gaps.
+
+    ``max_vol_multiplier`` and ``max_shock_sigma`` bound the tails. Raising
+    them makes options-mode backtests look better without making them more
+    realistic -- see the module docstring.
+    """
     rng = np.random.default_rng(seed)
     today = dt.date.today()
     start_date = start_date or (today - dt.timedelta(days=int(days * 1.45)))
@@ -43,18 +71,27 @@ def generate_index_series(
         stay = regime_persistence if state[i - 1] == 0 else 0.94
         state[i] = state[i - 1] if rng.random() < stay else 1 - state[i - 1]
 
-    vol_mult = np.where(state == 1, 2.3, 1.0)
+    vol_mult = np.where(state == 1, stress_vol_multiplier, 1.0)
     drift = np.where(state == 1, -annual_drift * 1.4, annual_drift)
 
     # GARCH-like persistence on top of the regime.
+    daily_base = base_vol / np.sqrt(252)
     daily_vol = np.zeros(n)
-    daily_vol[0] = base_vol / np.sqrt(252)
+    daily_vol[0] = daily_base
     for i in range(1, n):
-        shock = abs(rng.standard_t(df=4)) * 0.0012
-        daily_vol[i] = 0.90 * daily_vol[i - 1] + 0.10 * (base_vol / np.sqrt(252)) + 0.05 * shock
-    daily_vol *= vol_mult
+        shock = abs(rng.standard_t(df=5)) * 0.0012
+        daily_vol[i] = 0.90 * daily_vol[i - 1] + 0.10 * daily_base + 0.05 * shock
+    # Index volatility mean-reverts hard; it does not compound without limit.
+    daily_vol = np.clip(daily_vol * vol_mult, daily_base * 0.35,
+                        daily_base * max_vol_multiplier)
 
-    returns = drift / 252 + daily_vol * rng.standard_t(df=5, size=n) / np.sqrt(5 / 3)
+    # Student-t rescaled to unit variance, then clipped: without the clip the
+    # fat vol process and the fat return draw multiply into moves no index
+    # delivers outside a crisis.
+    df_returns = 6
+    shocks = rng.standard_t(df=df_returns, size=n) / np.sqrt(df_returns / (df_returns - 2))
+    shocks = np.clip(shocks, -max_shock_sigma, max_shock_sigma)
+    returns = drift / 252 + daily_vol * shocks
     close = start_price * np.exp(np.cumsum(returns))
 
     # Overnight gap, then an intraday path around it.

@@ -30,6 +30,42 @@ def test_synthetic_volatility_is_plausible(synthetic):
     assert 8 < annual < 40, "generated series should look like an equity index"
 
 
+@pytest.mark.parametrize("seed", [7, 11, 42, 2024, 99])
+def test_synthetic_tails_match_a_real_index(seed):
+    """Lock the tail calibration.
+
+    Long-option payoffs are convex, so an overstated tail inflates every
+    options-mode backtest run against this data. An earlier version compounded
+    three multiplicative tail sources and produced kurtosis near 18 with 9-12%
+    single days -- which made the engine look far better than it is.
+    """
+    from quantsutra.data import generate_index_series
+
+    returns = generate_index_series(days=1200, seed=seed)["close"].pct_change().dropna()
+    annual_vol = returns.std() * np.sqrt(252) * 100
+    assert 11 < annual_vol < 19, f"annualised vol {annual_vol:.1f}% is not index-like"
+
+    over_2 = (returns.abs() > 0.02).mean()
+    over_3 = (returns.abs() > 0.03).mean()
+    over_5 = (returns.abs() > 0.05).mean()
+    assert over_2 < 0.08, f"{over_2:.1%} of days move >2%; real indices are nearer 3-5%"
+    assert over_3 < 0.025, f"{over_3:.1%} of days move >3%; real indices are nearer 1%"
+    assert over_5 < 0.006, f"{over_5:.2%} of days move >5%; that is crisis frequency"
+    assert returns.min() > -0.09, f"worst day {returns.min():.1%} is a crisis print"
+    assert returns.kurtosis() < 8, "tails are too fat to be a fair options-backtest proxy"
+
+
+def test_tail_bounds_are_tunable_and_actually_bind():
+    """Raising the caps must widen the tails -- otherwise they are decoration."""
+    from quantsutra.data import generate_index_series
+
+    tight = generate_index_series(days=800, seed=3, max_vol_multiplier=1.5,
+                                  max_shock_sigma=2.0)["close"].pct_change().dropna()
+    loose = generate_index_series(days=800, seed=3, max_vol_multiplier=4.0,
+                                  max_shock_sigma=6.0)["close"].pct_change().dropna()
+    assert loose.abs().max() > tight.abs().max()
+
+
 def test_synthetic_vix_is_negatively_correlated_with_returns(synthetic):
     vix = generate_vix_series(synthetic)
     correlation = np.corrcoef(vix.pct_change().fillna(0),
