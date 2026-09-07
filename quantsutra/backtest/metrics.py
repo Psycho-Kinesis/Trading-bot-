@@ -76,6 +76,13 @@ class PerformanceReport:
             lines.append(f"Time in market  : {m['time_in_market_pct']:.1f}% of bars")
         if m.get("return_over_max_dd") is not None:
             lines.append(f"Return / max DD : {m['return_over_max_dd']:.2f}")
+        if m.get("benchmark_return") is not None:
+            lines.append(
+                f"Buy & hold      : {m['benchmark_return']:.2%} "
+                f"(Rs.{m['benchmark_pnl']:,.0f}), max DD {m['benchmark_max_drawdown']:.2%}"
+                + (f", return/DD {m['benchmark_return_over_dd']:.2f}"
+                   if m.get("benchmark_return_over_dd") is not None else "")
+            )
         return lines
 
     def caveats(self) -> list[str]:
@@ -101,6 +108,21 @@ class PerformanceReport:
         if m["max_drawdown"] < -0.25:
             out.append(f"Maximum drawdown of {m['max_drawdown']:.0%}. Ask honestly whether "
                        f"you would have kept trading the system through that.")
+        benchmark = m.get("benchmark_return")
+        if benchmark is not None and m["total_return"] < benchmark:
+            shortfall = benchmark - m["total_return"]
+            out.append(
+                f"Underperformed buy-and-hold by {shortfall:.1%} over the same window "
+                f"({m['total_return']:.1%} vs {benchmark:.1%}). Trading {m['trades']} times "
+                f"to finish behind a single buy order is the result that matters -- check "
+                f"whether the smaller drawdown and lower time in market are worth it to you."
+            )
+        elif benchmark is not None and m.get("return_over_max_dd") and \
+                m.get("benchmark_return_over_dd") and \
+                m["return_over_max_dd"] < m["benchmark_return_over_dd"]:
+            out.append(
+                "Beat buy-and-hold on return but not on return per unit of drawdown."
+            )
         if m.get("best_trade_share") and m["best_trade_share"] > 0.4:
             out.append(f"The single best trade produced {m['best_trade_share']:.0%} of total "
                        f"profit. Remove it and the strategy may have no edge.")
@@ -122,9 +144,38 @@ def _time_in_market(trades: pd.DataFrame, equity: pd.Series) -> float | None:
     return round(100 * bars_held / len(equity), 1)
 
 
+def buy_and_hold(prices: pd.Series, capital: float) -> dict:
+    """What simply holding the index over the same window would have done.
+
+    This is the benchmark a directional strategy has to beat to be worth
+    running. A system that trades 51 times to underperform a single buy order
+    has not earned its complexity, however good its Sharpe looks in isolation.
+    """
+    prices = prices.dropna()
+    if len(prices) < 2 or prices.iloc[0] <= 0:
+        return {}
+    total_return = float(prices.iloc[-1] / prices.iloc[0] - 1)
+    peak = prices.cummax()
+    max_dd = float(((prices - peak) / peak).min())
+    out = {
+        "benchmark_return": total_return,
+        "benchmark_pnl": total_return * capital,
+        "benchmark_max_drawdown": max_dd,
+        "benchmark_return_over_dd": (total_return / abs(max_dd)) if max_dd < 0 else None,
+    }
+    try:
+        years = (prices.index[-1] - prices.index[0]).days / 365.25
+        if years > 0.25 and 1 + total_return > 0:
+            out["benchmark_cagr"] = float((1 + total_return) ** (1 / years) - 1)
+    except (TypeError, AttributeError):
+        pass
+    return out
+
+
 def compute_metrics(
     trades: pd.DataFrame, equity: pd.Series, initial_capital: float,
     periods_per_year: int = TRADING_DAYS, risk_free_rate: float = 0.0,
+    benchmark_prices: pd.Series | None = None,
 ) -> PerformanceReport:
     """Build the full report from a trade log and an equity curve.
 
@@ -147,7 +198,7 @@ def compute_metrics(
             "expectancy_r": 0.0, "avg_win": 0.0, "avg_loss": 0.0,
             "max_consecutive_losses": 0, "cost_drag_pct": 0.0,
             "best_trade_share": None, "time_in_market_pct": None,
-            "return_over_max_dd": None,
+            "return_over_max_dd": None, "benchmark_return": None,
         }
         return PerformanceReport(empty, equity, trades if trades is not None else pd.DataFrame())
 
@@ -235,4 +286,6 @@ def compute_metrics(
         "return_over_max_dd": (total_return / abs(max_dd)) if max_dd < 0 else None,
         "time_in_market_pct": _time_in_market(trades, equity),
     }
+    if benchmark_prices is not None:
+        metrics.update(buy_and_hold(benchmark_prices, initial_capital))
     return PerformanceReport(metrics, equity, trades)

@@ -243,7 +243,10 @@ class Backtester:
 
         trade_frame = pd.DataFrame([t.to_dict() for t in trades])
         eq = pd.Series(dict(equity_curve)).sort_index()
-        report = compute_metrics(trade_frame, eq, cfg.initial_capital)
+        # Benchmark against holding the index over exactly the traded window.
+        traded = d["close"].iloc[cfg.warmup_bars:]
+        report = compute_metrics(trade_frame, eq, cfg.initial_capital,
+                                 benchmark_prices=traded)
         for key, count in self._skips.items():
             skipped[key] = skipped.get(key, 0) + count
 

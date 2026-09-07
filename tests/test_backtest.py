@@ -133,3 +133,64 @@ def test_backtest_summary_warns_about_synthetic_option_prices():
     result = Backtester(BacktestConfig(mode="options", warmup_bars=250,
                                        initial_capital=1_500_000)).run(_series())
     assert "synthetic" in result.summary().lower()
+
+
+# --- buy-and-hold benchmark ----------------------------------------------
+
+def test_buy_and_hold_computes_return_and_drawdown():
+    from quantsutra.backtest import buy_and_hold
+
+    prices = pd.Series([100.0, 120.0, 80.0, 110.0],
+                       index=pd.bdate_range("2024-01-01", periods=4))
+    result = buy_and_hold(prices, 1_000_000)
+    assert result["benchmark_return"] == pytest.approx(0.10)
+    assert result["benchmark_pnl"] == pytest.approx(100_000)
+    # Worst point is 80 against a running peak of 120.
+    assert result["benchmark_max_drawdown"] == pytest.approx(-1 / 3, rel=1e-3)
+
+
+def test_buy_and_hold_handles_degenerate_input():
+    from quantsutra.backtest import buy_and_hold
+
+    assert buy_and_hold(pd.Series([100.0]), 1_000) == {}
+    assert buy_and_hold(pd.Series(dtype=float), 1_000) == {}
+
+
+def test_metrics_flag_underperforming_buy_and_hold():
+    """Trading 50 times to finish behind a single buy order is the result that
+    matters, and it must not be buried."""
+    trades = pd.DataFrame({"pnl": [1000.0] * 50, "costs": [100.0] * 50})
+    equity = pd.Series(1_000_000 + np.cumsum(trades["pnl"]),
+                       index=pd.bdate_range("2024-01-01", periods=50))
+    # Strategy makes 5%; the index doubles.
+    prices = pd.Series(np.linspace(100, 200, 50),
+                       index=pd.bdate_range("2024-01-01", periods=50))
+    report = compute_metrics(trades, equity, 1_000_000, benchmark_prices=prices)
+    assert report.metrics["benchmark_return"] == pytest.approx(1.0)
+    assert any("Underperformed buy-and-hold" in c for c in report.caveats())
+    assert any("Buy & hold" in line for line in report.summary_lines())
+
+
+def test_metrics_do_not_flag_when_the_strategy_wins():
+    trades = pd.DataFrame({"pnl": [20_000.0] * 50, "costs": [100.0] * 50})
+    equity = pd.Series(1_000_000 + np.cumsum(trades["pnl"]),
+                       index=pd.bdate_range("2024-01-01", periods=50))
+    prices = pd.Series(np.linspace(100, 102, 50),
+                       index=pd.bdate_range("2024-01-01", periods=50))
+    report = compute_metrics(trades, equity, 1_000_000, benchmark_prices=prices)
+    assert not any("Underperformed buy-and-hold" in c for c in report.caveats())
+
+
+def test_benchmark_is_absent_when_no_prices_are_supplied():
+    trades = pd.DataFrame({"pnl": [100.0] * 10, "costs": [10.0] * 10})
+    equity = pd.Series(1_000_000 + np.cumsum(trades["pnl"]))
+    metrics = compute_metrics(trades, equity, 1_000_000).metrics
+    assert metrics.get("benchmark_return") is None
+
+
+@pytest.mark.slow
+def test_backtest_reports_the_benchmark():
+    result = Backtester(BacktestConfig(mode="options", warmup_bars=250,
+                                       initial_capital=1_500_000)).run(_series())
+    assert result.report.metrics.get("benchmark_return") is not None
+    assert "Buy & hold" in result.summary()
