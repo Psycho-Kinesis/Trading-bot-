@@ -1,0 +1,91 @@
+# NSE/BSE trading holidays (equity + F&O segment).
+#
+# Exchanges publish these annually, usually in December for the following year.
+# The lists below are best-effort and MUST be refreshed each year -- an out of
+# date list silently shifts every expiry calculation that lands near a holiday.
+# `quantsutra calendar --check` reports how stale this file is.
+#
+# `provisional: true` marks a year whose list was not confirmed against an
+# exchange circular; the calendar will warn when it uses one.
+
+2023:
+  provisional: false
+  dates:
+    - {date: "2023-01-26", name: "Republic Day"}
+    - {date: "2023-03-07", name: "Holi"}
+    - {date: "2023-03-30", name: "Ram Navami"}
+    - {date: "2023-04-04", name: "Mahavir Jayanti"}
+    - {date: "2023-04-07", name: "Good Friday"}
+    - {date: "2023-04-14", name: "Dr. Ambedkar Jayanti"}
+    - {date: "2023-05-01", name: "Maharashtra Day"}
+    - {date: "2023-06-28", name: "Bakri Id"}
+    - {date: "2023-08-15", name: "Independence Day"}
+    - {date: "2023-09-19", name: "Ganesh Chaturthi"}
+    - {date: "2023-10-02", name: "Mahatma Gandhi Jayanti"}
+    - {date: "2023-10-24", name: "Dussehra"}
+    - {date: "2023-11-14", name: "Diwali Balipratipada"}
+    - {date: "2023-11-27", name: "Gurunanak Jayanti"}
+    - {date: "2023-12-25", name: "Christmas"}
+
+2024:
+  provisional: false
+  dates:
+    - {date: "2024-01-26", name: "Republic Day"}
+    - {date: "2024-03-08", name: "Mahashivratri"}
+    - {date: "2024-03-25", name: "Holi"}
+    - {date: "2024-03-29", name: "Good Friday"}
+    - {date: "2024-04-11", name: "Id-Ul-Fitr"}
+    - {date: "2024-04-17", name: "Shri Ram Navami"}
+    - {date: "2024-05-01", name: "Maharashtra Day"}
+    - {date: "2024-05-20", name: "General Elections (Mumbai)"}
+    - {date: "2024-06-17", name: "Bakri Id"}
+    - {date: "2024-07-17", name: "Muharram"}
+    - {date: "2024-08-15", name: "Independence Day"}
+    - {date: "2024-10-02", name: "Mahatma Gandhi Jayanti"}
+    - {date: "2024-11-01", name: "Diwali Laxmi Pujan"}
+    - {date: "2024-11-15", name: "Gurunanak Jayanti"}
+    - {date: "2024-12-25", name: "Christmas"}
+  muhurat:
+    - {date: "2024-11-01", session: "18:00-19:00", name: "Muhurat Trading"}
+
+2025:
+  provisional: false
+  dates:
+    - {date: "2025-02-26", name: "Mahashivratri"}
+    - {date: "2025-03-14", name: "Holi"}
+    - {date: "2025-03-31", name: "Id-Ul-Fitr"}
+    - {date: "2025-04-10", name: "Shri Mahavir Jayanti"}
+    - {date: "2025-04-14", name: "Dr. Ambedkar Jayanti"}
+    - {date: "2025-04-18", name: "Good Friday"}
+    - {date: "2025-05-01", name: "Maharashtra Day"}
+    - {date: "2025-08-15", name: "Independence Day"}
+    - {date: "2025-08-27", name: "Ganesh Chaturthi"}
+    - {date: "2025-10-02", name: "Mahatma Gandhi Jayanti / Dussehra"}
+    - {date: "2025-10-21", name: "Diwali Laxmi Pujan"}
+    - {date: "2025-10-22", name: "Diwali Balipratipada"}
+    - {date: "2025-11-05", name: "Prakash Gurpurb Sri Guru Nanak Dev"}
+    - {date: "2025-12-25", name: "Christmas"}
+  muhurat:
+    - {date: "2025-10-21", session: "13:45-14:45", name: "Muhurat Trading"}
+
+2026:
+  # PROVISIONAL -- derived from the usual festival calendar, not from an
+  # exchange circular.  Replace with the published list before relying on it.
+  provisional: true
+  dates:
+    - {date: "2026-01-26", name: "Republic Day"}
+    - {date: "2026-03-04", name: "Holi"}
+    - {date: "2026-03-20", name: "Id-Ul-Fitr"}
+    - {date: "2026-03-26", name: "Shri Ram Navami"}
+    - {date: "2026-03-31", name: "Shri Mahavir Jayanti"}
+    - {date: "2026-04-03", name: "Good Friday"}
+    - {date: "2026-04-14", name: "Dr. Ambedkar Jayanti"}
+    - {date: "2026-05-01", name: "Maharashtra Day"}
+    - {date: "2026-05-27", name: "Bakri Id"}
+    - {date: "2026-08-15", name: "Independence Day"}
+    - {date: "2026-09-14", name: "Ganesh Chaturthi"}
+    - {date: "2026-10-02", name: "Mahatma Gandhi Jayanti"}
+    - {date: "2026-10-20", name: "Dussehra"}
+    - {date: "2026-11-09", name: "Diwali Balipratipada"}
+    - {date: "2026-11-24", name: "Gurunanak Jayanti"}
+    - {date: "2026-12-25", name: "Christmas"}

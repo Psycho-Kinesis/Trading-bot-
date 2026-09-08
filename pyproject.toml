@@ -1,0 +1,86 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quantsutra"
+version = "0.1.0"
+description = "A rule-based analysis and signal engine for Indian equity indices and their F&O contracts (NIFTY, BANKNIFTY, SENSEX)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "scipy>=1.10",
+    "requests>=2.28",
+    "PyYAML>=6.0",
+    "click>=8.1",
+    "rich>=13.0",
+    "python-dateutil>=2.8",
+]
+
+[project.optional-dependencies]
+yahoo = ["yfinance>=0.2.40"]
+# ruff is pinned to a minor range: its default rule set widens between
+# minor releases, and an unpinned linter turned this branch red with 131
+# findings on a day nothing had changed. The rule selection below is also
+# explicit, so both halves of the contract are fixed.
+dev = ["pytest>=7.4", "pytest-cov>=4.1", "ruff>=0.15,<0.17"]
+
+[project.scripts]
+quantsutra = "quantsutra.cli:cli"
+
+[tool.setuptools.packages.find]
+include = ["quantsutra*"]
+
+[tool.setuptools.package-data]
+quantsutra = ["../config/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::UserWarning"]
+markers = ["slow: full backtest runs; deselect with -m 'not slow'"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+# Pin the rule set explicitly. Without this, `select` defaults to whatever the
+# installed ruff version happens to ship -- CI installs the newest release, so
+# a ruff minor bump silently widened the defaults from ~4 rule groups to ~20
+# and turned a green branch red with 131 findings on an unrelated day.
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",         # pyflakes
+    "I",         # import sorting
+    "UP",        # pyupgrade
+    "B",         # bugbear
+    "SIM",       # simplify
+    "PERF",      # performance
+    "DTZ",       # timezone-naive datetimes -- load-bearing here, see below
+    "RUF",
+]
+ignore = [
+    # Broad excepts are deliberate at module boundaries: one broken rule, feed
+    # or playbook must never take down a scan. Each site says so in a comment.
+    "BLE001",
+    # try/except inside a loop is the mechanism of that isolation, not an
+    # oversight. The "performance overhead" is irrelevant at this scale.
+    "PERF203",
+    # `a + [b]` is clearer than `[*a, b]` in the level- and rule-building code
+    # where it appears; rewriting 17 verified sites buys nothing.
+    "RUF005",
+    # Long explanatory strings in rationale text read better unsplit.
+    "ISC003",
+    "E501",     # line length is enforced by the formatter, not the linter
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests build fixtures inline and assert on them; the stricter production
+# rules add noise without adding safety there.
+"tests/*" = ["DTZ", "PERF", "SIM", "B011"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["quantsutra"]
