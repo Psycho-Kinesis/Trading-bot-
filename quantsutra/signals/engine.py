@@ -30,10 +30,14 @@ from ..constants import IST, Action, Direction, Regime
 from ..indicators import compute_all, snapshot
 from ..patterns.candles import detect_candles
 from ..patterns.classical import detect_chart_patterns
-from ..patterns.levels import (confluence_zones, find_levels, level_interaction,
-                               reinforce_with_round_numbers, round_number_levels)
-from ..patterns.structure import (fair_value_gaps, liquidity_sweeps, market_structure,
-                                  order_blocks)
+from ..patterns.levels import (
+    confluence_zones,
+    find_levels,
+    level_interaction,
+    reinforce_with_round_numbers,
+    round_number_levels,
+)
+from ..patterns.structure import fair_value_gaps, liquidity_sweeps, market_structure, order_blocks
 from ..regime import classify_regime
 from .base import CATEGORY_CAPS, MarketContext, RuleResult, Signal
 from .rules import ALL_RULES, evaluate_rules

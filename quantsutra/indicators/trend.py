@@ -8,9 +8,26 @@ import pandas as pd
 from ._util import ensure_ohlcv, series, true_range, wilder_smooth
 
 __all__ = [
-    "sma", "ema", "wma", "hma", "dema", "tema", "kama", "vwma", "alma",
-    "macd", "adx", "supertrend", "psar", "ichimoku", "aroon", "vortex",
-    "trix", "dpo", "mass_index", "ma_ribbon_score",
+    "adx",
+    "alma",
+    "aroon",
+    "dema",
+    "dpo",
+    "ema",
+    "hma",
+    "ichimoku",
+    "kama",
+    "ma_ribbon_score",
+    "macd",
+    "mass_index",
+    "psar",
+    "sma",
+    "supertrend",
+    "tema",
+    "trix",
+    "vortex",
+    "vwma",
+    "wma",
 ]
 
 

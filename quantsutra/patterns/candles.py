@@ -23,7 +23,7 @@ import pandas as pd
 
 from ..indicators._util import ensure_ohlcv
 
-__all__ = ["CandleSignal", "detect_candles", "candle_anatomy", "PATTERN_BIAS"]
+__all__ = ["PATTERN_BIAS", "CandleSignal", "candle_anatomy", "detect_candles"]
 
 # Direction each pattern implies: +1 bullish, -1 bearish, 0 indecision.
 PATTERN_BIAS: dict[str, int] = {

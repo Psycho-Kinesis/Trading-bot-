@@ -6,8 +6,12 @@ import pytest
 
 from quantsutra.risk.costs import CostModel
 from quantsutra.risk.manager import RiskLimits, RiskManager
-from quantsutra.risk.sizing import (fixed_fractional, kelly_fraction,
-                                    size_option_position, volatility_target_size)
+from quantsutra.risk.sizing import (
+    fixed_fractional,
+    kelly_fraction,
+    size_option_position,
+    volatility_target_size,
+)
 
 
 def test_option_costs_charge_stt_on_the_sell_side_only():

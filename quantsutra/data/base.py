@@ -14,7 +14,7 @@ import pandas as pd
 
 from ..constants import IST
 
-__all__ = ["DataFeed", "normalise_frame", "validate_frame", "FeedError", "resample_ohlcv"]
+__all__ = ["DataFeed", "FeedError", "normalise_frame", "resample_ohlcv", "validate_frame"]
 
 
 class FeedError(RuntimeError):

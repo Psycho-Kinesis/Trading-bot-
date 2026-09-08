@@ -16,7 +16,7 @@ import pandas as pd
 
 from ..indicators._util import ensure_ohlcv
 
-__all__ = ["Swing", "fractals", "swing_points", "zigzag", "swing_series", "last_swings"]
+__all__ = ["Swing", "fractals", "last_swings", "swing_points", "swing_series", "zigzag"]
 
 
 @dataclass(frozen=True)

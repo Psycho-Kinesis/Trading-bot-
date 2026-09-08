@@ -1,5 +1,7 @@
 """Walk-forward validation and the paper broker."""
 
+from itertools import pairwise
+
 import pytest
 
 from quantsutra.backtest import BacktestConfig, WalkForwardResult, rolling_windows, walk_forward
@@ -10,7 +12,7 @@ def test_rolling_windows_are_consecutive_and_non_overlapping_on_test():
     windows = list(rolling_windows(1000, 400, 150))
     assert windows[0] == (slice(0, 400), slice(400, 550))
     test_slices = [t for _, t in windows]
-    for earlier, later in zip(test_slices, test_slices[1:]):
+    for earlier, later in pairwise(test_slices):
         assert later.start >= earlier.stop, "test windows must not overlap"
 
 
@@ -45,7 +47,7 @@ def _folds(is_exp, oos_exp, trades=10):
                "net_pnl": 0, "max_drawdown": 0, "profit_factor": None},
         "oos": {"trades": trades, "win_rate": 0.5, "expectancy_r": b,
                 "net_pnl": 0, "max_drawdown": 0, "profit_factor": None},
-    } for i, (a, b) in enumerate(zip(is_exp, oos_exp))]
+    } for i, (a, b) in enumerate(zip(is_exp, oos_exp, strict=True))]
 
 
 def test_efficiency_flags_a_strategy_that_failed_out_of_sample():

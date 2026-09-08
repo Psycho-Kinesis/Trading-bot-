@@ -11,7 +11,7 @@ from __future__ import annotations
 import datetime as dt
 from dataclasses import dataclass, field
 
-__all__ = ["RiskLimits", "RiskManager", "RiskCheck"]
+__all__ = ["RiskCheck", "RiskLimits", "RiskManager"]
 
 
 @dataclass

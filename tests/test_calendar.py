@@ -95,3 +95,66 @@ def test_expiry_context_flags_gamma_risk():
     assert cal.expiry_context("NIFTY", expiry).gamma_risk == "EXTREME"
     far = cal.expiry_context("NIFTY", dt.date(2025, 9, 10))
     assert far.gamma_risk in ("NORMAL", "ELEVATED", "HIGH")
+
+
+# --- timezone correctness -------------------------------------------------
+
+def _frozen_clock(instant):
+    """Patch datetime.now so the calendar sees a fixed instant."""
+
+    class Frozen(dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return instant.astimezone(tz) if tz else instant.replace(tzinfo=None)
+
+    return Frozen
+
+
+def test_market_date_is_ist_not_host_time(monkeypatch):
+    """A UTC host must still resolve the correct Indian trading day.
+
+    Between 00:00 and 05:30 IST a UTC host is on the *previous* calendar date.
+    Before this was fixed, `is_expiry_day` returned True the day after expiry --
+    which drives the expiry veto, the gamma-risk classification and the risk
+    manager's block on selling premium into expiry.
+    """
+    # Wednesday 00:30 IST == Tuesday 19:00 UTC. 2025-09-09 was a NIFTY expiry.
+    instant = dt.datetime(2025, 9, 10, 0, 30, tzinfo=cal.IST)
+    assert instant.astimezone(dt.timezone.utc).date() == dt.date(2025, 9, 9), \
+        "fixture must straddle the UTC/IST date boundary"
+
+    monkeypatch.setattr(cal.dt, "datetime", _frozen_clock(instant))
+    assert cal.today_ist() == dt.date(2025, 9, 10)
+    assert cal.now_ist().date() == dt.date(2025, 9, 10)
+    # Expiry was yesterday; today is not an expiry day.
+    assert cal.is_expiry_day("NIFTY") is False
+    assert cal.next_expiry("NIFTY") == dt.date(2025, 9, 16)
+
+
+def test_expiry_day_is_detected_correctly_in_ist(monkeypatch):
+    """The mirror case: during Indian market hours on expiry day it must say so."""
+    instant = dt.datetime(2025, 9, 9, 11, 30, tzinfo=cal.IST)
+    monkeypatch.setattr(cal.dt, "datetime", _frozen_clock(instant))
+    assert cal.today_ist() == dt.date(2025, 9, 9)
+    assert cal.is_expiry_day("NIFTY") is True
+    assert cal.days_to_expiry("NIFTY") == 0
+
+
+def test_date_defaults_all_resolve_in_ist(monkeypatch):
+    """Every calendar entry point that defaults its date must use IST."""
+    instant = dt.datetime(2025, 9, 10, 2, 0, tzinfo=cal.IST)   # 20:30 UTC previous day
+    monkeypatch.setattr(cal.dt, "datetime", _frozen_clock(instant))
+    today = dt.date(2025, 9, 10)
+
+    assert cal.next_expiry("NIFTY") == cal.next_expiry("NIFTY", today)
+    assert cal.expiry_chain("NIFTY") == cal.expiry_chain("NIFTY", today)
+    assert cal.lot_size("NIFTY") == cal.lot_size("NIFTY", today)
+    assert cal.has_weekly("NIFTY") == cal.has_weekly("NIFTY", today)
+    assert cal.days_to_expiry("NIFTY") == cal.days_to_expiry("NIFTY", today)
+    assert cal.expiry_context("NIFTY").date == today
+
+
+def test_now_ist_is_timezone_aware():
+    now = cal.now_ist()
+    assert now.tzinfo is not None
+    assert now.utcoffset() == dt.timedelta(hours=5, minutes=30)

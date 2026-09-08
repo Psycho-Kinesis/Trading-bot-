@@ -59,6 +59,13 @@ the fixture was not.
 
 Mark anything that runs a full backtest `@pytest.mark.slow`.
 
+**Market dates come from `calendar_in.today_ist()` / `now_ist()`, never
+`date.today()`.** Every cloud host runs UTC, which is 5h30m behind India, so
+between 00:00 and 05:30 IST a naive `date.today()` returns yesterday's Indian
+date. That made `is_expiry_day` fire a day late, which drives the expiry veto,
+the gamma-risk label and the block on selling premium into expiry. Ruff's `DTZ`
+rules are selected specifically to catch regressions here.
+
 ## Gotchas
 
 - `ensure_ohlcv` returns the input uncopied when it is already canonical.
@@ -68,3 +75,6 @@ Mark anything that runs a full backtest `@pytest.mark.slow`.
   align with a boolean mask, not `.loc[other.index]`.
 - The NSE and Yahoo endpoints are blocked from most cloud hosts. Use
   `--source synthetic` or `CsvFeed` when developing without a home connection.
+- Run lint as `python -m ruff`, not `ruff` — a globally-installed ruff on PATH
+  may be a different version from the one in your environment, which is how a
+  locally-green branch reached CI red.

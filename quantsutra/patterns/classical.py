@@ -275,8 +275,9 @@ def detect_chart_patterns(
             continue
         highs = [s.price for s in p if s.is_high]
         lows = [s.price for s in p if not s.is_high]
-        if len(highs) >= 2 and len(lows) >= 2:
-            if _rel(max(highs), min(highs)) < 0.015 and _rel(max(lows), min(lows)) < 0.015:
+        if (len(highs) >= 2 and len(lows) >= 2
+                and _rel(max(highs), min(highs)) < 0.015
+                and _rel(max(lows), min(lows)) < 0.015):
                 top, bottom = float(np.mean(highs)), float(np.mean(lows))
                 if top - bottom > a * 2:
                     end_i = p[-1].index

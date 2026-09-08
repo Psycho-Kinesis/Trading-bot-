@@ -7,5 +7,12 @@ is deliberate -- see ``quantsutra/brokers/base.py``.
 from .base import Broker, Fill, Order, OrderStatus, OrderType, Position
 from .paper import PaperBroker
 
-__all__ = ["Broker", "Order", "Fill", "Position", "OrderType", "OrderStatus",
-           "PaperBroker"]
+__all__ = [
+           "Broker",
+           "Fill",
+           "Order",
+           "OrderStatus",
+           "OrderType",
+           "PaperBroker",
+           "Position",
+]

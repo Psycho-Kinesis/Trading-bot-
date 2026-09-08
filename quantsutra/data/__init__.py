@@ -4,14 +4,23 @@ from .base import DataFeed, FeedError, normalise_frame, resample_ohlcv, validate
 from .cache import FeedCache, cached_history
 from .csv_feed import CsvFeed
 from .nse import NseFeed
-from .synthetic import (generate_index_series, generate_intraday_series,
-                        generate_vix_series)
+from .synthetic import generate_index_series, generate_intraday_series, generate_vix_series
 from .yahoo import YahooFeed
 
 __all__ = [
-    "DataFeed", "FeedError", "normalise_frame", "validate_frame", "resample_ohlcv",
-    "YahooFeed", "NseFeed", "CsvFeed", "FeedCache", "cached_history",
-    "generate_index_series", "generate_intraday_series", "generate_vix_series",
+    "CsvFeed",
+    "DataFeed",
+    "FeedCache",
+    "FeedError",
+    "NseFeed",
+    "YahooFeed",
+    "cached_history",
+    "generate_index_series",
+    "generate_intraday_series",
+    "generate_vix_series",
+    "normalise_frame",
+    "resample_ohlcv",
+    "validate_frame",
 ]
 
 

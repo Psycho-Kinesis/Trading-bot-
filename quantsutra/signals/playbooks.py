@@ -19,11 +19,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 from ..constants import Direction, Regime
 from .base import MarketContext
 
-__all__ = ["Playbook", "PlaybookMatch", "PLAYBOOKS", "match_playbooks"]
+__all__ = ["PLAYBOOKS", "Playbook", "PlaybookMatch", "match_playbooks"]
 
 
 @dataclass
@@ -62,9 +61,7 @@ class Playbook:
             return False
         if self.phases and ctx.session_phase not in self.phases and ctx.timeframe != "1d":
             return False
-        if self.timeframes and ctx.timeframe not in self.timeframes:
-            return False
-        return True
+        return not (self.timeframes and ctx.timeframe not in self.timeframes)
 
 
 # ---------------------------------------------------------------------------

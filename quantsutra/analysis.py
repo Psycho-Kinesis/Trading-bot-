@@ -299,8 +299,7 @@ def _build_recommendation(signal, result, playbooks) -> dict:
     if result.get("event_risk", {}).get("level") in ("HIGH", "ELEVATED"):
         lines.append(f"Event risk is {result['event_risk']['level']}: "
                      f"{result['event_risk']['flags'][0]}")
-    for note in result.get("structure_reasoning", []):
-        lines.append(note)
+    lines.extend(result.get("structure_reasoning", []))
 
     # A playbook pointing the other way is worth saying out loud rather than
     # burying: it is the clearest available evidence that the setup is contested.

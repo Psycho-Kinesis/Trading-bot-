@@ -14,7 +14,9 @@ from dataclasses import dataclass, field
 
 import requests
 
-__all__ = ["Notifier", "ConsoleSink", "TelegramSink", "format_signal"]
+from ..calendar_in import now_ist
+
+__all__ = ["ConsoleSink", "Notifier", "TelegramSink", "format_signal"]
 
 
 def format_signal(result: dict, verbose: bool = False) -> str:
@@ -106,7 +108,7 @@ class Notifier:
         most of the time. Sending it every time is how a useful alert becomes
         background noise you stop reading.
         """
-        now = now or dt.datetime.now()
+        now = now or now_ist()
         if action == "NO_TRADE" and not self.notify_no_trade:
             return False
         previous = self._last.get(symbol)
@@ -128,5 +130,5 @@ class Notifier:
         text = format_signal(result, verbose)
         title = f"{symbol} {action}"
         delivered = [sink.name for sink in self.sinks if sink.send(text, title)]
-        self._last[symbol] = (action, now or dt.datetime.now())
+        self._last[symbol] = (action, now or now_ist())
         return {"sent": bool(delivered), "sinks": delivered}

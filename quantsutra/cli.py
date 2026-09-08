@@ -20,6 +20,7 @@ import warnings
 import click
 
 from . import __version__
+from .calendar_in import today_ist
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -130,7 +131,7 @@ def _print_analysis(console, result, issues, show_rules=True):
     from rich.panel import Panel
     from rich.text import Text
 
-    from .report.console import (render_events, render_regime, render_signal)
+    from .report.console import render_events, render_regime, render_signal
 
     if issues:
         body = Text()
@@ -237,8 +238,8 @@ def _print_trade_blocks(console, result) -> None:
             body.append(Text(f"\n  INCOMPLETE: could not price leg(s) "
                              f"{contract.get('missing_legs')}. Do not place a partial "
                              f"structure.", style="bold red"))
-        for reason in contract.get("reasons", [])[:5]:
-            body.append(Text(f"  {reason}", style="dim"))
+        body.extend(Text(f"  {reason}", style="dim")
+                    for reason in contract.get("reasons", [])[:5])
         console.print(Panel(Group(*body), title="Option contract", border_style="magenta"))
     elif result.get("contract_note"):
         console.print(Panel(Text(result["contract_note"], style="yellow"),
@@ -262,8 +263,8 @@ def _print_trade_blocks(console, result) -> None:
             table.add_row("Vega / vol pt", f"Rs.{greeks.get('vega_per_vol_pt', 0):,.0f}")
         style = "green" if strategy.get("risk_defined") else "red"
         items = [table]
-        for note in strategy.get("notes", []):
-            items.append(Text(f"  {note}", style="yellow"))
+        items.extend(Text(f"  {note}", style="yellow")
+                     for note in strategy.get("notes", []))
         console.print(Panel(Group(*items), title="Structure", border_style=style))
 
     if position:
@@ -466,13 +467,19 @@ def calendar(symbol, days):
     from rich.table import Table
     from rich.text import Text
 
-    from .calendar_in import (expiry_chain, holiday_data_status, holidays,
-                              is_trading_day, lot_size, next_trading_day)
+    from .calendar_in import (
+        expiry_chain,
+        holiday_data_status,
+        holidays,
+        is_trading_day,
+        lot_size,
+        next_trading_day,
+    )
     from .knowledge.events import event_risk
     from .report.console import render_events
 
     console = _console()
-    today = dt.date.today()
+    today = today_ist()
 
     table = Table(show_header=True, header_style="dim", box=None, padding=(0, 2))
     table.add_column("Expiry")
@@ -619,7 +626,7 @@ def demo(capital):
             {"strike": strike, "type": "PE", "ltp": round(bs_price(spot, strike, t, iv, "PE"), 2),
              "oi": int(oi * 1.15), "iv": round(iv * 100, 2), "volume": oi // 2, "oi_change": 12000},
         ]
-    option_chain = chain_from_records("NIFTY", spot, dt.date.today() + dt.timedelta(days=6),
+    option_chain = chain_from_records("NIFTY", spot, today_ist() + dt.timedelta(days=6),
                                       records, dte_trading=dte, lot_size=75, strike_step=step)
 
     result = analyze("NIFTY", frame, "1d", higher_tf=weekly, chain=option_chain,

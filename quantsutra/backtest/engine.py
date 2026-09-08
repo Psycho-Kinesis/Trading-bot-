@@ -141,7 +141,7 @@ class Backtester:
         self, ohlcv: pd.DataFrame, higher_tf: pd.DataFrame | None = None,
         iv_series: pd.Series | None = None, vix_series: pd.Series | None = None,
         progress: bool = False,
-    ) -> "BacktestResult":
+    ) -> BacktestResult:
         cfg = self.config
         d = ensure_ohlcv(ohlcv)
         if not isinstance(d.index, pd.DatetimeIndex):

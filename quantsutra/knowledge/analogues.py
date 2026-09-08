@@ -19,14 +19,13 @@ uncertainty is visible rather than implied.
 
 from __future__ import annotations
 
-
 import numpy as np
 import pandas as pd
 
 from ..indicators._util import ensure_ohlcv
 from .events import MARKET_EVENTS
 
-__all__ = ["find_analogues", "shape_distance", "nearest_historical_events"]
+__all__ = ["find_analogues", "nearest_historical_events", "shape_distance"]
 
 
 def _normalise(window: np.ndarray) -> np.ndarray:

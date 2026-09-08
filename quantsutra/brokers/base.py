@@ -15,7 +15,7 @@ import datetime as dt
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
-__all__ = ["Order", "Position", "Fill", "Broker", "OrderType", "OrderStatus"]
+__all__ = ["Broker", "Fill", "Order", "OrderStatus", "OrderType", "Position"]
 
 
 class OrderType:

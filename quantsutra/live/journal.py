@@ -13,10 +13,11 @@ not count.
 
 from __future__ import annotations
 
-import datetime as dt
 import json
 import sqlite3
 from pathlib import Path
+
+from ..calendar_in import now_ist
 
 __all__ = ["Journal"]
 
@@ -84,7 +85,7 @@ class Journal:
                                     regime, actionable, vetoes, reasons, payload)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
-                signal.get("timestamp") or dt.datetime.now().isoformat(),
+                signal.get("timestamp") or now_ist().isoformat(),
                 signal.get("symbol"), signal.get("timeframe"),
                 signal.get("direction"), signal.get("action"),
                 signal.get("confidence"), signal.get("raw_score"), signal.get("spot"),
@@ -114,7 +115,7 @@ class Journal:
             """INSERT OR REPLACE INTO outcomes
                (signal_id, resolved_at, exit_price, outcome, pnl, r_multiple, notes)
                VALUES (?,?,?,?,?,?,?)""",
-            (signal_id, dt.datetime.now().isoformat(), exit_price, outcome, pnl,
+            (signal_id, now_ist().isoformat(), exit_price, outcome, pnl,
              r_multiple, notes),
         )
         self.connection.commit()

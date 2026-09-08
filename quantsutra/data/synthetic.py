@@ -1,4 +1,4 @@
-"""Synthetic market data generator.
+r"""Synthetic market data generator.
 
 Exists so the package can be demonstrated, tested and profiled without a
 network connection or a paid data subscription.  The generator is a
@@ -37,7 +37,7 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 
-from ..calendar_in import trading_days
+from ..calendar_in import today_ist, trading_days
 from ..constants import IST
 
 __all__ = ["generate_index_series", "generate_intraday_series", "generate_vix_series"]
@@ -57,7 +57,7 @@ def generate_index_series(
     realistic -- see the module docstring.
     """
     rng = np.random.default_rng(seed)
-    today = dt.date.today()
+    today = today_ist()
     start_date = start_date or (today - dt.timedelta(days=int(days * 1.45)))
     horizon = min(start_date + dt.timedelta(days=int(days * 1.6)), today)
     dates = trading_days(start_date, horizon)[:days]

@@ -1,15 +1,25 @@
 """Pattern recognition: candles, swings, structure and classical formations."""
 
+from itertools import pairwise
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from quantsutra.patterns.candles import detect_candles
 from quantsutra.patterns.classical import detect_chart_patterns
-from quantsutra.patterns.levels import (find_levels, level_interaction,
-                                        reinforce_with_round_numbers, round_number_levels)
-from quantsutra.patterns.structure import (fair_value_gaps, liquidity_sweeps,
-                                           market_structure, order_blocks)
+from quantsutra.patterns.levels import (
+    find_levels,
+    level_interaction,
+    reinforce_with_round_numbers,
+    round_number_levels,
+)
+from quantsutra.patterns.structure import (
+    fair_value_gaps,
+    liquidity_sweeps,
+    market_structure,
+    order_blocks,
+)
 from quantsutra.patterns.swings import last_swings, swing_points, zigzag
 
 FLAT = [[100, 102, 98, 100]] * 20
@@ -64,7 +74,7 @@ def test_zigzag_pivots_alternate():
                          "close": close, "volume": 1})
     pivots = zigzag(data, 1.5)
     assert len(pivots) >= 4
-    assert all(a.kind != b.kind for a, b in zip(pivots, pivots[1:]))
+    assert all(a.kind != b.kind for a, b in pairwise(pivots))
 
 
 def test_swings_are_confirmed_after_the_fact():
@@ -83,7 +93,7 @@ def test_last_swings_alternate_and_are_recent():
     data = pd.DataFrame({"open": close, "high": close + 25, "low": close - 25,
                          "close": close, "volume": 1})
     recent = last_swings(zigzag(data, 1.5), 4)
-    assert all(a.kind != b.kind for a, b in zip(recent, recent[1:]))
+    assert all(a.kind != b.kind for a, b in pairwise(recent))
 
 
 def test_market_structure_labels_match_the_last_four_swings(uptrend, downtrend):

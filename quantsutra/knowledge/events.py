@@ -24,9 +24,15 @@ from __future__ import annotations
 import datetime as dt
 from dataclasses import dataclass
 
-
-__all__ = ["MarketEvent", "MARKET_EVENTS", "RECURRING_EVENTS", "events_between",
-           "event_risk", "upcoming_events", "lessons_for_regime"]
+__all__ = [
+    "MARKET_EVENTS",
+    "RECURRING_EVENTS",
+    "MarketEvent",
+    "event_risk",
+    "events_between",
+    "lessons_for_regime",
+    "upcoming_events",
+]
 
 
 @dataclass(frozen=True)
@@ -193,7 +199,9 @@ def upcoming_events(on: dt.date | None = None, horizon_days: int = 30) -> list[d
     Dates for movable events (RBI policy, results) are approximate; this
     flags the *category* of risk, not an exact calendar.
     """
-    on = on or dt.date.today()
+    from ..calendar_in import today_ist
+
+    on = on or today_ist()
     out: list[dict] = []
 
     budget = dt.date(on.year, 2, 1)
@@ -224,8 +232,9 @@ def event_risk(on: dt.date | None = None, symbol: str = "NIFTY") -> dict:
     Used by the signal engine to warn before an option is bought into a known
     IV crush.
     """
-    on = on or dt.date.today()
-    from ..calendar_in import expiry_context, is_trading_day
+    from ..calendar_in import expiry_context, is_trading_day, today_ist
+
+    on = on or today_ist()
 
     flags: list[str] = []
     level = "NORMAL"

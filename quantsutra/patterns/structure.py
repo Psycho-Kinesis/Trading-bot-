@@ -32,8 +32,14 @@ def _last_atr(d: pd.DataFrame, length: int = 14) -> float:
     value = series.iloc[-1] if len(series) else np.nan
     return float(value) if np.isfinite(value) and value > 0 else float("nan")
 
-__all__ = ["StructureState", "market_structure", "fair_value_gaps", "order_blocks",
-           "liquidity_sweeps", "inside_outside_sequence"]
+__all__ = [
+    "StructureState",
+    "fair_value_gaps",
+    "inside_outside_sequence",
+    "liquidity_sweeps",
+    "market_structure",
+    "order_blocks",
+]
 
 
 def _min_after(arr: np.ndarray, start: int, default: float) -> float:

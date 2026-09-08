@@ -4,9 +4,15 @@ import datetime as dt
 
 import pytest
 
-from quantsutra.knowledge import (MARKET_EVENTS, RECURRING_EVENTS, event_risk,
-                                  events_between, find_analogues, lessons_for_regime,
-                                  shape_distance)
+from quantsutra.knowledge import (
+    MARKET_EVENTS,
+    RECURRING_EVENTS,
+    event_risk,
+    events_between,
+    find_analogues,
+    lessons_for_regime,
+    shape_distance,
+)
 
 
 def test_every_event_carries_a_lesson():

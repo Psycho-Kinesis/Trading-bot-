@@ -24,7 +24,7 @@ import time
 
 import requests
 
-from ..calendar_in import lot_size, strike_step, trading_days_between
+from ..calendar_in import lot_size, strike_step, today_ist, trading_days_between
 from ..constants import IST
 from ..options.chain import OptionChain, chain_from_records
 from .base import FeedError
@@ -123,11 +123,13 @@ class NseFeed:
         expiries = []
         for raw in records.get("expiryDates") or []:
             try:
-                expiries.append(dt.datetime.strptime(raw, "%d-%b-%Y").date())
+                # NSE gives a bare date ("09-Sep-2025"); the naive intermediate
+                # is discarded by .date() and never used as an instant.
+                expiries.append(dt.datetime.strptime(raw, "%d-%b-%Y").date())  # noqa: DTZ007
             except ValueError:
                 continue
         if expiry is None:
-            expiry = min(expiries) if expiries else dt.date.today()
+            expiry = min(expiries) if expiries else today_ist()
 
         want = expiry.strftime("%d-%b-%Y")
         flat: list[dict] = []
@@ -153,7 +155,7 @@ class NseFeed:
                 f"{[e.isoformat() for e in expiries[:6]]}"
             )
 
-        today = dt.date.today()
+        today = today_ist()
         chain = chain_from_records(
             symbol=symbol.upper(), spot=spot, expiry=expiry, records=flat,
             dte_trading=max(trading_days_between(today, expiry), 0),
@@ -177,7 +179,7 @@ class NseFeed:
         out = []
         for raw in ((payload.get("records") or {}).get("expiryDates") or []):
             try:
-                out.append(dt.datetime.strptime(raw, "%d-%b-%Y").date())
+                out.append(dt.datetime.strptime(raw, "%d-%b-%Y").date())  # noqa: DTZ007
             except ValueError:
                 continue
         return sorted(out)

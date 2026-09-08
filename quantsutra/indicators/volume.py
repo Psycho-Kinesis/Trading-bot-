@@ -15,9 +15,21 @@ from ._util import ensure_ohlcv
 from .trend import ema
 
 __all__ = [
-    "has_usable_volume", "obv", "cmf", "mfi", "adl", "vwap", "anchored_vwap",
-    "force_index", "ease_of_movement", "pvt", "volume_zscore", "volume_profile",
-    "relative_volume", "klinger", "vwap_bands",
+    "adl",
+    "anchored_vwap",
+    "cmf",
+    "ease_of_movement",
+    "force_index",
+    "has_usable_volume",
+    "klinger",
+    "mfi",
+    "obv",
+    "pvt",
+    "relative_volume",
+    "volume_profile",
+    "volume_zscore",
+    "vwap",
+    "vwap_bands",
 ]
 
 
@@ -182,7 +194,10 @@ def volume_profile(
     highs = d["high"].to_numpy(float)
     lows = d["low"].to_numpy(float)
     volumes = d["volume"].to_numpy(float)
-    for bar_high, bar_low, bar_volume in zip(highs, lows, volumes):
+    # Same frame, so the three arrays are the same length by construction;
+    # strict=True turns any future mismatch into an error rather than
+    # silently truncating the profile.
+    for bar_high, bar_low, bar_volume in zip(highs, lows, volumes, strict=True):
         if (not np.isfinite(bar_volume) or bar_volume <= 0
                 or not np.isfinite(bar_high) or not np.isfinite(bar_low)):
             continue

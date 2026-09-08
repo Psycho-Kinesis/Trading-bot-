@@ -24,11 +24,18 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-from .pricing import (DEFAULT_DIVIDEND_YIELD, DEFAULT_RATE, greeks,
-                      implied_volatility, moneyness)
+from .pricing import DEFAULT_DIVIDEND_YIELD, DEFAULT_RATE, greeks, implied_volatility, moneyness
 
-__all__ = ["OptionChain", "classify_oi_buildup", "max_pain", "put_call_ratio",
-           "iv_skew", "support_resistance_from_oi", "chain_from_records", "iv_rank"]
+__all__ = [
+    "OptionChain",
+    "chain_from_records",
+    "classify_oi_buildup",
+    "iv_rank",
+    "iv_skew",
+    "max_pain",
+    "put_call_ratio",
+    "support_resistance_from_oi",
+]
 
 
 def classify_oi_buildup(price_change: float, oi_change: float,
@@ -281,7 +288,7 @@ def max_pain(chain: OptionChain) -> dict:
     return {
         "max_pain": mp,
         "distance_pct": round(100 * (mp - chain.spot) / chain.spot, 3),
-        "pain_curve": [{"strike": float(s), "pain": float(p)} for s, p in zip(strikes, pains)],
+        "pain_curve": [{"strike": float(s), "pain": float(p)} for s, p in zip(strikes, pains, strict=True)],
     }
 
 

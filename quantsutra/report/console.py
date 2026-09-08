@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 from rich.console import Console, Group
 from rich.panel import Panel
 from rich.table import Table
@@ -10,8 +9,14 @@ from rich.text import Text
 
 from ..constants import Action, Direction
 
-__all__ = ["render_signal", "render_regime", "render_chain", "render_backtest",
-           "render_events", "console"]
+__all__ = [
+    "console",
+    "render_backtest",
+    "render_chain",
+    "render_events",
+    "render_regime",
+    "render_signal",
+]
 
 console = Console()
 
@@ -54,8 +59,7 @@ def render_regime(regime: dict) -> Panel:
     items = [table]
     if regime.get("notes"):
         items.append(Text(""))
-        for note in regime["notes"]:
-            items.append(Text(f"  ! {note}", style="yellow"))
+        items.extend(Text(f"  ! {note}", style="yellow") for note in regime["notes"])
     return Panel(Group(*items), title="Market regime", border_style="blue")
 
 
@@ -190,8 +194,8 @@ def render_chain(summary: dict) -> Panel:
         if summary.get(key) is not None:
             table.add_row(key.replace("_", " ").title(), str(summary[key]))
     items = [table]
-    for warning in summary.get("warnings", []):
-        items.append(Text(f"  ! {warning}", style="yellow"))
+    items.extend(Text(f"  ! {warning}", style="yellow")
+                 for warning in summary.get("warnings", []))
     return Panel(Group(*items), title="Option chain", border_style="magenta")
 
 

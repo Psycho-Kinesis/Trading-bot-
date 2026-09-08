@@ -20,11 +20,17 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from ..constants import Action
-from .pricing import (DEFAULT_DIVIDEND_YIELD, DEFAULT_RATE, greeks,
-                      intrinsic_value)
+from .pricing import DEFAULT_DIVIDEND_YIELD, DEFAULT_RATE, greeks, intrinsic_value
 
-__all__ = ["Leg", "Strategy", "build_strategy", "payoff_curve", "strategy_metrics",
-           "choose_structure", "STRUCTURE_NOTES"]
+__all__ = [
+    "STRUCTURE_NOTES",
+    "Leg",
+    "Strategy",
+    "build_strategy",
+    "choose_structure",
+    "payoff_curve",
+    "strategy_metrics",
+]
 
 
 @dataclass

@@ -23,6 +23,55 @@ from .constants import IST, MARKET_CLOSE, MARKET_OPEN, PRE_OPEN_END, PRE_OPEN_ST
 
 CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
 
+__all__ = [
+    "ExpiryContext",
+    "days_to_expiry",
+    "expiry_chain",
+    "expiry_context",
+    "has_weekly",
+    "holiday_data_status",
+    "holidays",
+    "instrument_specs",
+    "is_expiry_day",
+    "is_market_open",
+    "is_trading_day",
+    "lot_size",
+    "minutes_into_session",
+    "monthly_expiry",
+    "monthly_expiry_on_or_after",
+    "next_expiry",
+    "next_trading_day",
+    "now_ist",
+    "previous_trading_day",
+    "session_close",
+    "session_open",
+    "session_phase",
+    "spec",
+    "strike_step",
+    "today_ist",
+    "trading_days",
+    "trading_days_between",
+    "weekly_expiry_on_or_after",
+]
+
+
+def now_ist() -> dt.datetime:
+    """Current instant in IST.
+
+    Always use this rather than ``datetime.now()``. A host running UTC -- which
+    is every cloud VPS by default -- is 5h30m behind India, so between 00:00 and
+    05:30 IST a naive ``date.today()`` returns *yesterday's* Indian date. That
+    is not cosmetic: it made ``is_expiry_day`` report True the day after expiry,
+    which drives the expiry veto, the gamma-risk classification and the
+    risk manager's block on selling premium into expiry.
+    """
+    return dt.datetime.now(IST)
+
+
+def today_ist() -> dt.date:
+    """Today's date in India, regardless of the host's timezone."""
+    return now_ist().date()
+
 
 def _load(name: str) -> dict:
     path = CONFIG_DIR / name
@@ -46,7 +95,7 @@ def _holiday_file() -> dict:
 def holidays() -> dict[dt.date, str]:
     """All configured holidays as ``{date: name}``."""
     out: dict[dt.date, str] = {}
-    for year, block in _holiday_file().items():
+    for block in _holiday_file().values():
         for row in block.get("dates", []):
             out[dt.date.fromisoformat(row["date"])] = row["name"]
     return out
@@ -146,7 +195,7 @@ def session_close(date: dt.date) -> dt.datetime:
 
 
 def is_market_open(now: dt.datetime | None = None) -> bool:
-    now = now.astimezone(IST) if now else dt.datetime.now(IST)
+    now = now.astimezone(IST) if now else now_ist()
     if not is_trading_day(now.date()):
         return False
     return session_open(now.date()) <= now <= session_close(now.date())
@@ -154,14 +203,14 @@ def is_market_open(now: dt.datetime | None = None) -> bool:
 
 def minutes_into_session(now: dt.datetime | None = None) -> int:
     """Minutes elapsed since 09:15, clamped to the 375-minute session."""
-    now = now.astimezone(IST) if now else dt.datetime.now(IST)
+    now = now.astimezone(IST) if now else now_ist()
     delta = (now - session_open(now.date())).total_seconds() / 60
     return int(max(0, min(375, delta)))
 
 
 def session_phase(now: dt.datetime | None = None) -> str:
     """Named phase of the session -- several playbooks are phase-gated."""
-    now = now.astimezone(IST) if now else dt.datetime.now(IST)
+    now = now.astimezone(IST) if now else now_ist()
     if not is_trading_day(now.date()):
         return "HOLIDAY"
     if _at(now.date(), PRE_OPEN_START) <= now < _at(now.date(), PRE_OPEN_END):
@@ -204,7 +253,7 @@ def spec(symbol: str) -> dict:
 
 
 def lot_size(symbol: str, on: dt.date | None = None) -> int:
-    on = on or dt.date.today()
+    on = on or today_ist()
     value = _effective(spec(symbol)["lot_size"], on, "value")
     if value is None:
         raise ValueError(f"no lot size configured for {symbol} on {on}")
@@ -216,7 +265,7 @@ def strike_step(symbol: str) -> int:
 
 
 def has_weekly(symbol: str, on: dt.date | None = None) -> bool:
-    on = on or dt.date.today()
+    on = on or today_ist()
     return _effective(spec(symbol)["weekly_expiry"], on, "weekday") is not None
 
 
@@ -271,7 +320,7 @@ def monthly_expiry_on_or_after(symbol: str, date: dt.date) -> dt.date:
 
 def next_expiry(symbol: str, date: dt.date | None = None) -> dt.date:
     """The nearest tradable expiry -- weekly if the index has one, else monthly."""
-    date = date or dt.date.today()
+    date = date or today_ist()
     wk = weekly_expiry_on_or_after(symbol, date)
     mo = monthly_expiry_on_or_after(symbol, date)
     return min(wk, mo) if wk else mo
@@ -279,7 +328,7 @@ def next_expiry(symbol: str, date: dt.date | None = None) -> dt.date:
 
 def expiry_chain(symbol: str, date: dt.date | None = None, count: int = 4) -> list[dt.date]:
     """The next ``count`` distinct expiries, ascending."""
-    date = date or dt.date.today()
+    date = date or today_ist()
     out: list[dt.date] = []
     cursor = date
     while len(out) < count:
@@ -291,13 +340,13 @@ def expiry_chain(symbol: str, date: dt.date | None = None, count: int = 4) -> li
 
 
 def is_expiry_day(symbol: str, date: dt.date | None = None) -> bool:
-    date = date or dt.date.today()
+    date = date or today_ist()
     return is_trading_day(date) and next_expiry(symbol, date) == date
 
 
 def days_to_expiry(symbol: str, date: dt.date | None = None, calendar: bool = False) -> int:
     """Days until the nearest expiry -- trading days by default."""
-    date = date or dt.date.today()
+    date = date or today_ist()
     exp = next_expiry(symbol, date)
     if calendar:
         return (exp - date).days
@@ -331,7 +380,7 @@ class ExpiryContext:
 
 
 def expiry_context(symbol: str, date: dt.date | None = None) -> ExpiryContext:
-    date = date or dt.date.today()
+    date = date or today_ist()
     exp = next_expiry(symbol, date)
     return ExpiryContext(
         symbol=symbol.upper(),

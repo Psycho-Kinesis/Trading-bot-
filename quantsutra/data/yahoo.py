@@ -21,6 +21,7 @@ import time
 import pandas as pd
 import requests
 
+from ..calendar_in import today_ist
 from ..constants import INDEX_YAHOO, IST
 from .base import FeedError, normalise_frame
 
@@ -88,8 +89,8 @@ class YahooFeed:
         params: dict = {"interval": yahoo_interval, "includePrePost": "false",
                         "events": "div,split"}
         if start or end:
-            start = start or (dt.date.today() - dt.timedelta(days=365 * 3))
-            end = end or dt.date.today()
+            start = start or (today_ist() - dt.timedelta(days=365 * 3))
+            end = end or today_ist()
             params["period1"] = int(dt.datetime.combine(start, dt.time()).timestamp())
             params["period2"] = int(dt.datetime.combine(end, dt.time(23, 59)).timestamp())
         else:

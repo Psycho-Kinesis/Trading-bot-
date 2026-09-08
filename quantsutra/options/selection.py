@@ -28,8 +28,13 @@ from ..constants import Action
 from .chain import OptionChain
 from .pricing import greeks, moneyness
 
-__all__ = ["StrikeChoice", "select_strike", "select_expiry", "recommend_contract",
-           "MIN_OI_DEFAULT"]
+__all__ = [
+    "MIN_OI_DEFAULT",
+    "StrikeChoice",
+    "recommend_contract",
+    "select_expiry",
+    "select_strike",
+]
 
 # A strike below this OI is usually not worth trading on a weekly index option;
 # tune per instrument -- BANKNIFTY monthlies and SENSEX are thinner than NIFTY.

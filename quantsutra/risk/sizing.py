@@ -18,9 +18,13 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-
-__all__ = ["SizingResult", "fixed_fractional", "size_option_position",
-           "kelly_fraction", "volatility_target_size"]
+__all__ = [
+    "SizingResult",
+    "fixed_fractional",
+    "kelly_fraction",
+    "size_option_position",
+    "volatility_target_size",
+]
 
 
 @dataclass
@@ -54,7 +58,7 @@ def fixed_fractional(capital: float, risk_pct: float, risk_per_unit: float,
         return 0
     budget = capital * risk_pct
     risk_per_lot = risk_per_unit * lot_size
-    return int(min(max_lots, math.floor(budget / risk_per_lot))) if risk_per_lot > 0 else 0
+    return min(int(max_lots), math.floor(budget / risk_per_lot)) if risk_per_lot > 0 else 0
 
 
 def size_option_position(
@@ -125,7 +129,7 @@ def size_option_position(
     lots = fixed_fractional(capital, risk_pct, risk_per_unit, lot_size, max_lots)
 
     # Cap total premium outlay regardless of the stop.
-    premium_cap_lots = int(math.floor(capital * max_premium_pct / (premium * lot_size)))
+    premium_cap_lots = math.floor(capital * max_premium_pct / (premium * lot_size))
     if premium_cap_lots < lots:
         warnings.append(
             f"Reduced from {lots} to {premium_cap_lots} lot(s) to keep total premium outlay "
@@ -186,7 +190,7 @@ def volatility_target_size(capital: float, target_annual_vol: float, instrument_
     if instrument_vol <= 0 or price <= 0 or lot_size <= 0 or leverage <= 0:
         return 0
     target_notional = capital * leverage * (target_annual_vol / instrument_vol)
-    return int(min(max_lots, math.floor(target_notional / (price * lot_size))))
+    return min(max_lots, math.floor(target_notional / (price * lot_size)))
 
 
 def kelly_fraction(win_rate: float, avg_win: float, avg_loss: float,

@@ -27,7 +27,7 @@ import pandas as pd
 
 from .engine import BacktestConfig, Backtester
 
-__all__ = ["WalkForwardResult", "walk_forward", "rolling_windows"]
+__all__ = ["WalkForwardResult", "rolling_windows", "walk_forward"]
 
 
 def rolling_windows(n: int, train: int, test: int, step: int | None = None):

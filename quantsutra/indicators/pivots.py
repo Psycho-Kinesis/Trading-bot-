@@ -13,7 +13,7 @@ import pandas as pd
 
 from ._util import ensure_ohlcv
 
-__all__ = ["classic_pivots", "fibonacci_pivots", "camarilla_pivots", "woodie_pivots", "cpr", "nearest_levels"]
+__all__ = ["camarilla_pivots", "classic_pivots", "cpr", "fibonacci_pivots", "nearest_levels", "woodie_pivots"]
 
 
 def _prev(df: pd.DataFrame) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
@@ -62,7 +62,7 @@ def camarilla_pivots(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def woodie_pivots(df: pd.DataFrame) -> pd.DataFrame:
-    h, lo, c, o = _prev(df)
+    h, lo, _c, o = _prev(df)
     p = (h + lo + 2 * o) / 4
     return pd.DataFrame({
         "pivot": p,

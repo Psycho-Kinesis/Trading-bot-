@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from itertools import pairwise
+
 import numpy as np
 import pandas as pd
 
@@ -9,9 +11,21 @@ from ._util import ensure_ohlcv, series, wilder_smooth
 from .trend import ema, sma
 
 __all__ = [
-    "rsi", "stoch_rsi", "stochastic", "cci", "roc", "momentum", "williams_r",
-    "ultimate_oscillator", "awesome_oscillator", "tsi", "cmo", "ppo",
-    "connors_rsi", "rsi_divergence", "coppock",
+    "awesome_oscillator",
+    "cci",
+    "cmo",
+    "connors_rsi",
+    "coppock",
+    "momentum",
+    "ppo",
+    "roc",
+    "rsi",
+    "rsi_divergence",
+    "stoch_rsi",
+    "stochastic",
+    "tsi",
+    "ultimate_oscillator",
+    "williams_r",
 ]
 
 
@@ -178,7 +192,7 @@ def rsi_divergence(
     pivot_lows = [i for i in range(pivot, n - pivot) if _is_pivot_low(i)]
 
     for idx_list, is_high in ((pivot_highs, True), (pivot_lows, False)):
-        for a, b in zip(idx_list, idx_list[1:]):
+        for a, b in pairwise(idx_list):
             if b - a > lookback or np.isnan(rv[a]) or np.isnan(rv[b]):
                 continue
             confirm = min(b + pivot, n - 1)

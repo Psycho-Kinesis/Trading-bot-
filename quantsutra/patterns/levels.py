@@ -32,8 +32,16 @@ def _last_atr(d: pd.DataFrame, length: int = 14) -> float:
     value = series.iloc[-1] if len(series) else np.nan
     return float(value) if np.isfinite(value) and value > 0 else float("nan")
 
-__all__ = ["Level", "Trendline", "find_levels", "fit_trendlines", "level_interaction",
-           "round_number_levels", "confluence_zones", "reinforce_with_round_numbers"]
+__all__ = [
+    "Level",
+    "Trendline",
+    "confluence_zones",
+    "find_levels",
+    "fit_trendlines",
+    "level_interaction",
+    "reinforce_with_round_numbers",
+    "round_number_levels",
+]
 
 
 @dataclass

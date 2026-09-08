@@ -18,7 +18,7 @@ from pathlib import Path
 
 import yaml
 
-__all__ = ["CostModel", "CostBreakdown", "load_cost_config", "estimate_slippage"]
+__all__ = ["CostBreakdown", "CostModel", "estimate_slippage", "load_cost_config"]
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "costs.yaml"
 
@@ -61,7 +61,7 @@ class CostBreakdown:
             "statutory": round(self.statutory, 2), "total": round(self.total, 2),
         }
 
-    def __add__(self, other: "CostBreakdown") -> "CostBreakdown":
+    def __add__(self, other: CostBreakdown) -> CostBreakdown:
         return CostBreakdown(
             brokerage=self.brokerage + other.brokerage, stt=self.stt + other.stt,
             exchange_charge=self.exchange_charge + other.exchange_charge,

@@ -18,13 +18,18 @@ import warnings
 from dataclasses import dataclass, field
 
 from ..analysis import AnalysisConfig, analyze
-from ..calendar_in import (is_market_open, is_trading_day, minutes_into_session,
-                           session_close, session_phase)
+from ..calendar_in import (
+    is_market_open,
+    is_trading_day,
+    minutes_into_session,
+    session_close,
+    session_phase,
+)
 from ..constants import IST
 from .journal import Journal
 from .notify import Notifier
 
-__all__ = ["ScannerConfig", "LiveScanner"]
+__all__ = ["LiveScanner", "ScannerConfig"]
 
 
 @dataclass

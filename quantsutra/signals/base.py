@@ -11,7 +11,7 @@ import pandas as pd
 from ..constants import Action, Bias, Direction, score_to_bias
 from ..regime import RegimeState
 
-__all__ = ["RuleResult", "MarketContext", "Signal", "Category", "CATEGORY_CAPS"]
+__all__ = ["CATEGORY_CAPS", "Category", "MarketContext", "RuleResult", "Signal"]
 
 
 class Category:

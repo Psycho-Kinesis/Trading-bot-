@@ -7,6 +7,7 @@ saw, which is the difference between a reproducible result and an anecdote.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import time
@@ -60,10 +61,9 @@ class FeedCache:
             return
         except (OSError, ValueError, ImportError, AttributeError):
             pass
-        try:
+        # Caching is an optimisation, never a hard dependency.
+        with contextlib.suppress(OSError):
             frame.to_csv(self._path(key, ".csv"), index_label="timestamp")
-        except OSError:
-            pass  # caching is an optimisation, never a hard dependency
 
     def get_json(self, *parts) -> dict | None:
         path = self._path(self._key(*parts), ".json")
